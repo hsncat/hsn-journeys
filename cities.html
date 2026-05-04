@@ -2,8 +2,11 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#FAFAFA">
     <title>城市足迹 - HSN Journey Traces</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -20,11 +23,22 @@
         </ul>
     </nav>
 
-    <main class="container">
-        <h1 class="page-title" style="margin-bottom:0.5rem;">我的城市足迹</h1>
-        <div class="expand-collapse-bar">
-            <a href="add.html" class="btn-primary" style="background:#2563EB;font-size:0.875rem;padding:0.5rem 1.25rem;">+ 添加旅程</a>
-            <button class="btn btn-secondary" id="toggle-all-btn" onclick="toggleAll()">⏬ 一键展开</button>
+    <main id="main" class="container" tabindex="-1">
+        <h1 class="page-title">我的城市足迹</h1>
+        <div class="cities-toolbar">
+            <div class="search-input">
+                <span class="search-input__icon" aria-hidden="true"></span>
+                <input type="search" id="city-search" placeholder="搜索城市、景点或国家…" aria-label="搜索旅程" autocomplete="off">
+            </div>
+            <div class="cities-filters" role="group" aria-label="筛选旅程">
+                <button class="filter-chip is-active" type="button" data-filter="all" aria-pressed="true">全部</button>
+                <button class="filter-chip" type="button" data-filter="domestic" aria-pressed="false">国内</button>
+                <button class="filter-chip" type="button" data-filter="international" aria-pressed="false">国外</button>
+            </div>
+            <div class="cities-actions">
+                <button class="btn btn-secondary" type="button" id="toggle-all-btn">展开全部</button>
+                <a href="add.html" class="btn btn-primary">添加旅程</a>
+            </div>
         </div>
         <div class="city-grid" id="city-grid"></div>
     </main>
@@ -34,6 +48,8 @@
     </footer>
 
     <script src="data.js"></script>
+    <script src="icons.js"></script>
+    <script src="ui.js"></script>
     <script src="cities.js"></script>
 </body>
 </html>

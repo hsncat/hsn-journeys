@@ -2,88 +2,15 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#FAFAFA">
     <title>添加旅程 - HSN Journey Traces</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <style>
-        .edit-form {
-            background: #fff;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        .form-group label {
-            display: block;
-            font-weight: 600;
-            color: #18181B;
-            margin-bottom: 0.375rem;
-            font-size: 0.875rem;
-        }
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            padding: 0.625rem 0.875rem;
-            border: 1px solid #E4E4E7;
-            border-radius: 6px;
-            font-size: 0.9375rem;
-            font-family: inherit;
-            color: #18181B;
-            background: #fff;
-        }
-        .form-group input:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #2563EB;
-            box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
-        }
-        .form-group textarea {
-            resize: vertical;
-            min-height: 100px;
-        }
-        .form-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-        }
-        .btn-group {
-            display: flex;
-            gap: 0.75rem;
-            margin-top: 1.5rem;
-            flex-wrap: wrap;
-        }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.375rem;
-            padding: 0.625rem 1.25rem;
-            border: none;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s, transform 0.2s;
-        }
-        .btn:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-        }
-        .btn-primary {
-            background: #2563EB;
-            color: #fff;
-        }
-        .btn-secondary {
-            background: #F4F4F5;
-            color: #3F3F46;
-        }
-    </style>
 </head>
-<body>
+<body class="add-page">
     <nav class="navbar">
         <div class="nav-brand">HSN Journey Traces</div>
         <input type="checkbox" id="nav-toggle" class="nav-toggle">
@@ -96,65 +23,116 @@
         </ul>
     </nav>
 
-    <main class="container">
+    <main id="main" class="container" tabindex="-1">
         <a href="index.html" class="back-link">&larr; 返回首页</a>
-        <h1 class="page-title">+ 添加新旅程</h1>
-        <div class="edit-form">
-            <div class="form-row dense">
-                <div class="form-group">
-                    <label>省份 *</label>
-                    <input type="text" id="add-province" placeholder="例如：福建">
+        <h1 class="page-title">添加新旅程</h1>
+
+        <article class="add-preview" id="add-preview" aria-live="polite">
+            <div class="add-preview__emoji" id="add-preview-emoji" aria-hidden="true">📍</div>
+            <div class="add-preview__body">
+                <h2 class="add-preview__title" id="add-preview-title">未命名旅程</h2>
+                <p class="add-preview__meta" id="add-preview-meta">填写信息以预览</p>
+            </div>
+        </article>
+
+        <form class="edit-form" id="add-form" novalidate>
+            <section class="form-section" aria-labelledby="sec-basic">
+                <h2 class="form-section__title" id="sec-basic">基本信息</h2>
+                <div class="form-row dense">
+                    <div class="form-group">
+                        <label for="add-province">省份 / 大区 *</label>
+                        <input type="text" id="add-province" name="province" placeholder="例如：福建" required autocomplete="off">
+                        <span class="form-error" id="err-province" aria-live="polite"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="add-city">城市 *</label>
+                        <input type="text" id="add-city" name="city" placeholder="例如：厦门" required autocomplete="off">
+                        <span class="form-error" id="err-city" aria-live="polite"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="add-emoji">封面 Emoji</label>
+                        <input type="text" id="add-emoji" name="emoji" placeholder="例如：🏝️" maxlength="4" autocomplete="off">
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label>城市 *</label>
-                    <input type="text" id="add-city" placeholder="例如：厦门">
+                    <label for="add-name">旅程名称 *</label>
+                    <input type="text" id="add-name" name="name" placeholder="例如：冬日厦门海滨漫游" required autocomplete="off">
+                    <span class="form-hint">留空时将以"省份·城市"自动生成</span>
+                    <span class="form-error" id="err-name" aria-live="polite"></span>
                 </div>
+            </section>
+
+            <section class="form-section" aria-labelledby="sec-time">
+                <h2 class="form-section__title" id="sec-time">时间</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="add-date">开始日期 *</label>
+                        <input type="date" id="add-date" name="date" required>
+                        <span class="form-error" id="err-date" aria-live="polite"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="add-endDate">结束日期</label>
+                        <input type="date" id="add-endDate" name="endDate">
+                        <span class="form-hint">未填则与开始日期相同</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-section" aria-labelledby="sec-cost">
+                <h2 class="form-section__title" id="sec-cost">费用（元）</h2>
+                <div class="form-row dense">
+                    <div class="form-group">
+                        <label for="add-cost-package">报团费</label>
+                        <input type="number" id="add-cost-package" name="package" placeholder="0" min="0" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label for="add-cost-transport">交通费</label>
+                        <input type="number" id="add-cost-transport" name="transport" placeholder="0" min="0" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label for="add-cost-accommodation">住宿费</label>
+                        <input type="number" id="add-cost-accommodation" name="accommodation" placeholder="0" min="0" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label for="add-cost-food">餐饮费</label>
+                        <input type="number" id="add-cost-food" name="food" placeholder="0" min="0" inputmode="numeric">
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-section" aria-labelledby="sec-highlights">
+                <h2 class="form-section__title" id="sec-highlights">亮点 &amp; 行程</h2>
                 <div class="form-group">
-                    <label>Emoji</label>
-                    <input type="text" id="add-emoji" placeholder="例如：🏝️">
+                    <label for="add-highlights">景点亮点</label>
+                    <input type="text" id="add-highlights" name="highlights" placeholder="例如：鼓浪屿、厦门大学、南普陀寺" autocomplete="off">
+                    <span class="form-hint">用 、 或 , 分隔多个亮点</span>
+                </div>
+                <p class="form-hint">详细行程可在保存后到旅程详情页中编辑添加。</p>
+            </section>
+
+            <section class="form-section" aria-labelledby="sec-photo">
+                <h2 class="form-section__title" id="sec-photo">封面照片</h2>
+                <div class="photo-input">
+                    <label for="add-photo" class="photo-input__drop" id="add-photo-label">
+                        <span class="photo-input__icon" aria-hidden="true"></span>
+                        <span class="photo-input__text">点击或拖拽上传照片</span>
+                        <span class="photo-input__hint">JPG / PNG · 自动压缩至 1600px</span>
+                    </label>
+                    <input type="file" id="add-photo" name="photo" accept="image/*" hidden>
+                </div>
+                <div class="photo-preview is-hidden" id="add-photo-preview" aria-live="polite">
+                    <img id="add-photo-img" alt="已选择的封面照片">
+                    <button type="button" class="icon-btn icon-btn--sm photo-preview__remove" id="add-photo-remove" aria-label="移除照片"></button>
+                </div>
+            </section>
+
+            <div class="sticky-actions">
+                <div class="sticky-actions__inner">
+                    <button type="button" class="btn btn-secondary" id="add-cancel-btn">取消</button>
+                    <button type="submit" class="btn btn-primary" id="add-save-btn">保存旅程</button>
                 </div>
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>名称 *</label>
-                    <input type="text" id="add-name" placeholder="例如：冬日厦门海滨漫游">
-                </div>
-                <div class="form-group">
-                    <label>开始日期 *</label>
-                    <input type="date" id="add-date">
-                </div>
-                <div class="form-group">
-                    <label>结束日期</label>
-                    <input type="date" id="add-endDate">
-                </div>
-            </div>
-            <div class="form-group">
-                <label>景点</label>
-                <input type="text" id="add-highlights" placeholder="例如：鼓浪屿、厦门大学、南普陀寺">
-            </div>
-            <div class="form-row dense">
-                <div class="form-group">
-                    <label>报团费 📦</label>
-                    <input type="number" id="add-cost-package" placeholder="0">
-                </div>
-                <div class="form-group">
-                    <label>交通费 🚗</label>
-                    <input type="number" id="add-cost-transport" placeholder="0">
-                </div>
-                <div class="form-group">
-                    <label>住宿费 🏨</label>
-                    <input type="number" id="add-cost-accommodation" placeholder="0">
-                </div>
-                <div class="form-group">
-                    <label>餐饮费 🍽️</label>
-                    <input type="number" id="add-cost-food" placeholder="0">
-                </div>
-            </div>
-            <div class="btn-group">
-                <button class="btn btn-primary" onclick="saveNew()">💾 保存</button>
-                <button class="btn btn-secondary" onclick="location.href='index.html'">❌ 取消</button>
-            </div>
-        </div>
+        </form>
     </main>
 
     <footer class="footer">
@@ -162,57 +140,8 @@
     </footer>
 
     <script src="data.js"></script>
-    <script>
-        const provinceInput = document.getElementById('add-province');
-        const cityInput = document.getElementById('add-city');
-        const nameInput = document.getElementById('add-name');
-
-        function autoFillName() {
-            if (nameInput.dataset.manual === 'true') return;
-            const p = provinceInput.value.trim();
-            const c = cityInput.value.trim();
-            nameInput.value = p && c && p !== c ? `${p}·${c}` : (p || c);
-        }
-
-        nameInput.addEventListener('input', () => {
-            nameInput.dataset.manual = 'true';
-        });
-        provinceInput.addEventListener('input', autoFillName);
-        cityInput.addEventListener('input', autoFillName);
-
-        function saveNew() {
-            const province = document.getElementById('add-province').value.trim();
-            const city = document.getElementById('add-city').value.trim();
-            const emoji = document.getElementById('add-emoji').value.trim() || '📍';
-            const name = document.getElementById('add-name').value.trim();
-            const date = document.getElementById('add-date').value;
-            const endDate = document.getElementById('add-endDate').value || date;
-            const highlightsStr = document.getElementById('add-highlights').value.trim();
-
-            const cost = {
-                package: document.getElementById('add-cost-package').value,
-                transport: document.getElementById('add-cost-transport').value,
-                accommodation: document.getElementById('add-cost-accommodation').value,
-                food: document.getElementById('add-cost-food').value
-            };
-
-            if (!province || !city || !name || !date) {
-                alert('省份、城市、名称和开始日期为必填项');
-                return;
-            }
-
-            const highlights = highlightsStr ? highlightsStr.split('、').map(h => h.trim()).filter(h => h) : [];
-
-            const subCard = { name, date, endDate, province, city, emoji, highlights, cost };
-            const title = province && province !== city ? `${province}·${city}` : (province || city);
-
-            const newId = addJourney({
-                province, city, emoji, date, endDate, title, highlights, cost, subCards: [subCard]
-            });
-
-            alert('添加成功！');
-            window.location.href = `detail.html?id=${newId}`;
-        }
-    </script>
+    <script src="icons.js"></script>
+    <script src="ui.js"></script>
+    <script src="add.js"></script>
 </body>
 </html>

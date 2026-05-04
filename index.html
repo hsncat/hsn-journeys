@@ -2,8 +2,11 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#FAFAFA">
     <title>HSN Journey Traces - 旅行足迹</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -20,12 +23,12 @@
         </ul>
     </nav>
 
+    <main id="main" tabindex="-1">
     <header class="hero">
         <div class="hero-content">
             <h1>探索世界的每一步</h1>
             <p>记录旅途中的风景、故事与感动</p>
-            <a href="cities.html" class="btn-primary">查看我的足迹</a>
-            <a href="add.html" class="btn-primary" style="margin-left: 1rem; background: #2563EB;">+ 添加旅程</a>
+            <a href="cities.html" class="btn btn-primary btn-lg">查看我的足迹</a>
         </div>
     </header>
 
@@ -50,12 +53,16 @@
     </section>
 
     <section class="packing-list-section">
-        <h2>🧳 行李清单</h2>
-        <div class="packing-list-card">
+        <details class="packing-details">
+            <summary>
+                <h2>🧳 行李清单</h2>
+                <span class="packing-details__hint">点击展开 / 收起</span>
+            </summary>
+            <div class="packing-list-card">
             <table class="packing-table">
                 <thead>
                     <tr>
-                        <th style="width: 30%;">项目（含出国）</th>
+                        <th class="packing-table__col">项目（含出国）</th>
                         <th>备注</th>
                     </tr>
                 </thead>
@@ -133,14 +140,19 @@
                     </tr>
                 </tbody>
             </table>
-        </div>
+            </div>
+        </details>
     </section>
+
+    </main>
 
     <footer class="footer">
         <p>HSN Journey Traces - 用脚步丈量世界</p>
     </footer>
 
     <script src="data.js"></script>
+    <script src="icons.js"></script>
+    <script src="ui.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

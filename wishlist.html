@@ -2,8 +2,11 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#FAFAFA">
     <title>旅游心愿单 - HSN Journey Traces</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -20,15 +23,20 @@
         </ul>
     </nav>
 
-    <header class="hero">
+    <main id="main" tabindex="-1">
+    <header class="hero hero--compact">
         <div class="hero-content">
             <h1>旅游心愿单</h1>
             <p>世界那么大，我想去看看</p>
         </div>
     </header>
 
-    <main class="container">
+    <div class="container">
+        <div class="wishlist-toolbar">
+            <button class="btn btn-primary" type="button" id="wishlist-add-btn">添加心愿</button>
+        </div>
         <div class="wishlist-grid" id="wishlist-grid"></div>
+    </div>
     </main>
 
     <footer class="footer">
@@ -36,6 +44,8 @@
     </footer>
 
     <script src="data.js"></script>
+    <script src="icons.js"></script>
+    <script src="ui.js"></script>
     <script src="wishlist.js"></script>
 </body>
 </html>

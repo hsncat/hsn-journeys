@@ -326,7 +326,7 @@ const defaultJourneys = [
     }
 ];
 
-const wishlist = [
+const defaultWishlist = [
     {
         city: "内蒙古",
         title: "乌兰察布&包头火山草原3日游",
@@ -638,4 +638,73 @@ let journeys = loadJourneys();
 if (!localStorage.getItem('hsn-journeys-reset-v20260504')) {
     resetJourneys();
     localStorage.setItem('hsn-journeys-reset-v20260504', '1');
+}
+
+/* --------------------------------------------------------------------
+ * Wishlist persistence (parallel to journeys)
+ * ------------------------------------------------------------------ */
+
+function loadWishlist() {
+    try {
+        const saved = localStorage.getItem('hsn-wishlist');
+        if (saved) return JSON.parse(saved);
+    } catch (e) {
+        console.error('Failed to load wishlist from localStorage:', e);
+    }
+    return JSON.parse(JSON.stringify(defaultWishlist));
+}
+
+function saveWishlist(data) {
+    try {
+        localStorage.setItem('hsn-wishlist', JSON.stringify(data));
+        return true;
+    } catch (e) {
+        console.error('Failed to save wishlist to localStorage:', e);
+        return false;
+    }
+}
+
+function getWishlistItemById(id) {
+    return wishlist.find(w => w.id === parseInt(id));
+}
+
+function addWishlistItem(item) {
+    const newId = Math.max.apply(null, [0].concat(wishlist.map(w => w.id || 0))) + 1;
+    item.id = newId;
+    wishlist.push(item);
+    saveWishlist(wishlist);
+    return newId;
+}
+
+function updateWishlistItem(id, updates) {
+    const idx = wishlist.findIndex(w => w.id === parseInt(id));
+    if (idx === -1) return false;
+    wishlist[idx] = Object.assign({}, wishlist[idx], updates);
+    saveWishlist(wishlist);
+    return true;
+}
+
+function deleteWishlistItem(id) {
+    const idx = wishlist.findIndex(w => w.id === parseInt(id));
+    if (idx === -1) return false;
+    wishlist.splice(idx, 1);
+    saveWishlist(wishlist);
+    return true;
+}
+
+function resetWishlist() {
+    wishlist.length = 0;
+    defaultWishlist.forEach(function (w) { wishlist.push(JSON.parse(JSON.stringify(w))); });
+    // Stamp ids on each entry so CRUD can find them.
+    wishlist.forEach(function (w, i) { if (!w.id) w.id = i + 1; });
+    saveWishlist(wishlist);
+}
+
+let wishlist = loadWishlist();
+// Stamp ids on legacy entries that pre-date persistence.
+wishlist.forEach(function (w, i) { if (!w.id) w.id = i + 1; });
+
+if (!localStorage.getItem('hsn-wishlist-reset-v20260504')) {
+    resetWishlist();
+    localStorage.setItem('hsn-wishlist-reset-v20260504', '1');
 }

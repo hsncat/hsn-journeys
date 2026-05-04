@@ -1,3 +1,9 @@
+/**
+ * Map page — Leaflet world map with markers per visited city.
+ *
+ * Depends on: data.js, icons.js, ui.js, leaflet
+ */
+
 const cityCoordinates = [
     { name: "巴黎", country: "法国", lat: 48.8566, lng: 2.3522, type: "international" },
     { name: "苏黎世", country: "瑞士", lat: 47.3769, lng: 8.5417, type: "international" },
@@ -66,58 +72,129 @@ function getMapLocations() {
     return Object.values(map);
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    try {
-        var map = L.map('world-map', {
-            zoomControl: true,
-            attributionControl: true
-        }).setView([35.8617, 104.1954], 4);
+(function () {
+    'use strict';
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 18
-        }).addTo(map);
+    const Icons = window.HsnIcons;
+    const esc = (window.HsnUI && HsnUI.escapeHtml) ? HsnUI.escapeHtml : function (s) { return String(s == null ? '' : s); };
 
-        var domesticStyle = {
-            radius: 8,
-            fillColor: '#2563EB',
-            color: '#fff',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.9
-        };
+    document.addEventListener('DOMContentLoaded', function () {
+        injectChrome();
+        wireOverlay();
+        initMap();
+    });
 
-        var internationalStyle = {
-            radius: 8,
-            fillColor: '#e53e3e',
-            color: '#fff',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.9
-        };
+    function injectChrome() {
+        const titleIcon = document.querySelector('.map-overlay__title-icon');
+        if (titleIcon) titleIcon.innerHTML = Icons.svg('mapPinned', { size: 22 });
 
-        var bounds = L.latLngBounds();
-        var locations = getMapLocations();
+        const closeBtn = document.getElementById('map-overlay-close');
+        if (closeBtn) closeBtn.innerHTML = Icons.svg('x', { size: 18 });
 
-        locations.forEach(function(city) {
-            var style = city.type === 'international' ? internationalStyle : domesticStyle;
-            var marker = L.circleMarker([city.lat, city.lng], style).addTo(map);
-
-            var journeysList = city.journeys.join('、');
-            var popupContent = '<div class="popup-city">' + city.name + '</div>' +
-                '<div class="popup-country">' + city.country + '</div>' +
-                '<div class="popup-count">' + city.journeys.length + ' 次旅行</div>' +
-                '<div style="margin-top: 0.25rem; font-size: 0.75rem; color: #71717A;">' + journeysList + '</div>';
-
-            marker.bindPopup(popupContent);
-            bounds.extend([city.lat, city.lng]);
-        });
-
-        if (locations.length > 0) {
-            map.fitBounds(bounds, { padding: [60, 60], maxZoom: 6 });
-        }
-    } catch (e) {
-        console.error('Map initialization error:', e);
-        document.getElementById('world-map').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#71717A;">地图加载失败，请检查网络连接</div>';
+        const openBtn = document.getElementById('map-overlay-open');
+        if (openBtn) openBtn.innerHTML = Icons.svg('info', { size: 22 });
     }
-});
+
+    function wireOverlay() {
+        const overlay = document.getElementById('map-overlay');
+        const closeBtn = document.getElementById('map-overlay-close');
+        const openBtn = document.getElementById('map-overlay-open');
+        if (!overlay) return;
+
+        function close() {
+            overlay.classList.add('is-hidden');
+            overlay.setAttribute('aria-hidden', 'true');
+            if (openBtn) openBtn.classList.add('is-visible');
+        }
+        function open() {
+            overlay.classList.remove('is-hidden');
+            overlay.removeAttribute('aria-hidden');
+            if (openBtn) openBtn.classList.remove('is-visible');
+        }
+
+        if (closeBtn) closeBtn.addEventListener('click', close);
+        if (openBtn) openBtn.addEventListener('click', open);
+    }
+
+    function cssVar(name, fallback) {
+        const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        return v || fallback;
+    }
+
+    function initMap() {
+        const target = document.getElementById('world-map');
+        if (!target) return;
+        try {
+            if (typeof L === 'undefined') throw new Error('Leaflet failed to load');
+
+            const map = L.map('world-map', {
+                zoomControl: true,
+                attributionControl: true,
+            }).setView([35.8617, 104.1954], 4);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 18,
+            }).addTo(map);
+
+            const accentColor = cssVar('--color-accent', '#2563EB');
+            const dangerColor = cssVar('--color-danger', '#DC2626');
+            const surfaceColor = cssVar('--color-surface', '#FFFFFF');
+
+            const domesticStyle = {
+                radius: 8,
+                fillColor: accentColor,
+                color: surfaceColor,
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.9,
+            };
+            const internationalStyle = {
+                radius: 8,
+                fillColor: dangerColor,
+                color: surfaceColor,
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.9,
+            };
+
+            const bounds = L.latLngBounds();
+            const locations = getMapLocations();
+
+            locations.forEach(function (city) {
+                const style = city.type === 'international' ? internationalStyle : domesticStyle;
+                const marker = L.circleMarker([city.lat, city.lng], style).addTo(map);
+                marker.bindPopup(buildPopup(city));
+                bounds.extend([city.lat, city.lng]);
+            });
+
+            if (locations.length > 0) {
+                map.fitBounds(bounds, { padding: [60, 60], maxZoom: 6 });
+            }
+        } catch (e) {
+            console.error('Map initialization error:', e);
+            renderError(target);
+        }
+    }
+
+    function buildPopup(city) {
+        const journeysList = (city.journeys || []).map(esc).join('、');
+        return ''
+            + '<div class="popup-city">' + esc(city.name) + '</div>'
+            + '<div class="popup-country">' + esc(city.country) + '</div>'
+            + '<div class="popup-count">' + city.journeys.length + ' 次旅行</div>'
+            + (journeysList ? '<div class="popup-list">' + journeysList + '</div>' : '');
+    }
+
+    function renderError(target) {
+        target.innerHTML = ''
+            + '<div class="map-error">'
+            +   '<div class="map-error__icon" aria-hidden="true">' + Icons.svg('alertCircle', { size: 36 }) + '</div>'
+            +   '<div class="map-error__title">地图加载失败</div>'
+            +   '<div class="map-error__desc">请检查网络连接后重试</div>'
+            +   '<button class="btn btn-primary" type="button" id="map-retry">重新加载</button>'
+            + '</div>';
+        const retry = document.getElementById('map-retry');
+        if (retry) retry.addEventListener('click', function () { location.reload(); });
+    }
+})();
