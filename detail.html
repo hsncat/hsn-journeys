@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>旅行详情 - HSN Journey Traces</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .edit-form {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #18181B;
+            margin-bottom: 0.375rem;
+            font-size: 0.875rem;
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            border: 1px solid #E4E4E7;
+            border-radius: 6px;
+            font-size: 0.9375rem;
+            font-family: inherit;
+            color: #18181B;
+            background: #fff;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #2563EB;
+            box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .btn-group {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        .btn-primary {
+            background: #2563EB;
+            color: #fff;
+        }
+        .btn-secondary {
+            background: #F4F4F5;
+            color: #3F3F46;
+        }
+        .btn-danger {
+            background: #FEE2E2;
+            color: #DC2626;
+        }
+        .action-bar {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .itinerary-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9375rem;
+            margin-bottom: 1rem;
+        }
+        .itinerary-table thead {
+            background: #F4F4F5;
+        }
+        .itinerary-table th,
+        .itinerary-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #E4E4E7;
+            text-align: left;
+            vertical-align: top;
+        }
+        .itinerary-table th {
+            font-weight: 600;
+            color: #18181B;
+        }
+        .itinerary-table tbody tr:hover {
+            background: #f7fafc;
+        }
+        .itinerary-editor {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .itinerary-header {
+            display: grid;
+            grid-template-columns: 140px 1fr 1fr 1fr 1fr 80px;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #71717A;
+            padding: 0 0.25rem;
+        }
+        .itinerary-row {
+            display: grid;
+            grid-template-columns: 140px 1fr 1fr 1fr 1fr 80px;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .itinerary-row input {
+            width: 100%;
+            padding: 0.5rem 0.625rem;
+            border: 1px solid #E4E4E7;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-family: inherit;
+        }
+        .itinerary-row input:focus {
+            outline: none;
+            border-color: #2563EB;
+        }
+        @media (max-width: 768px) {
+            .itinerary-header { display: none; }
+            .itinerary-row {
+                grid-template-columns: 1fr;
+                gap: 0.375rem;
+                background: #f7fafc;
+                padding: 0.75rem;
+                border-radius: 6px;
+                margin-bottom: 0.5rem;
+            }
+            .itinerary-row input { font-size: 0.9375rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">HSN Journey Traces</div>
+        <ul class="nav-links">
+            <li><a href="index.html">首页</a></li>
+            <li><a href="cities.html">城市足迹</a></li>
+            <li><a href="map.html">足迹地图</a></li>
+            <li><a href="wishlist.html">心愿单</a></li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        <a href="cities.html" class="back-link">&larr; 返回城市足迹</a>
+        <div class="action-bar" id="action-bar"></div>
+        <div id="journey-detail"></div>
+        <div id="edit-form" style="display:none;"></div>
+    </main>
+
+    <footer class="footer">
+        <p>HSN Journey Traces - 用脚步丈量世界</p>
+    </footer>
+
+    <script src="data.js"></script>
+    <script src="detail.js"></script>
+</body>
+</html>
