@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSN Journey Traces - 旅行足迹</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">HSN Journey Traces</div>
+        <ul class="nav-links">
+            <li><a href="index.html" class="active">首页</a></li>
+            <li><a href="cities.html">城市足迹</a></li>
+            <li><a href="map.html">足迹地图</a></li>
+            <li><a href="wishlist.html">心愿单</a></li>
+        </ul>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-content">
+            <h1>探索世界的每一步</h1>
+            <p>记录旅途中的风景、故事与感动</p>
+            <a href="cities.html" class="btn-primary">查看我的足迹</a>
+            <a href="add.html" class="btn-primary" style="margin-left: 1rem; background: #2563EB;">+ 添加旅程</a>
+        </div>
+    </header>
+
+    <section class="stats">
+        <div class="stat-card">
+            <span class="stat-number" id="city-count">0</span>
+            <span class="stat-label">足迹城市</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number" id="journey-count">0</span>
+            <span class="stat-label">旅行记录</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number" id="photo-count">0</span>
+            <span class="stat-label">精彩瞬间</span>
+        </div>
+    </section>
+
+    <section class="recent-journeys">
+        <h2>最近旅程</h2>
+        <div class="journey-grid" id="recent-journeys"></div>
+    </section>
+
+    <section class="packing-list-section">
+        <h2>🧳 行李清单</h2>
+        <div class="packing-list-card">
+            <table class="packing-table">
+                <thead>
+                    <tr>
+                        <th style="width: 30%;">项目（含出国）</th>
+                        <th>备注</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>身份证、护照、签证、港澳通行证、入境卡（新加坡）</td>
+                        <td>护照确保6个月有效期</td>
+                    </tr>
+                    <tr>
+                        <td>机票</td>
+                        <td>美团、携程、飞猪</td>
+                    </tr>
+                    <tr>
+                        <td>酒店</td>
+                        <td>booking、agoda、爱彼迎</td>
+                    </tr>
+                    <tr>
+                        <td>门票及行程预定</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>目的地取现金</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>电子支付</td>
+                        <td>visa信用卡、万事达卡、银联储蓄卡、支付宝/微信</td>
+                    </tr>
+                    <tr>
+                        <td>交通路线查询、交通卡</td>
+                        <td>谷歌地图、高德地图、苹果钱包直接申请</td>
+                    </tr>
+                    <tr>
+                        <td>手机、流量卡、换卡卡针</td>
+                        <td>淘宝购买流量卡</td>
+                    </tr>
+                    <tr>
+                        <td>翻译软件</td>
+                        <td>谷歌翻译、拍照翻译</td>
+                    </tr>
+                    <tr>
+                        <td>充电宝、充电线、转换插头</td>
+                        <td>手机（充电线）、ipad（充电线）、充电宝（充电线）、耳机（充电线）</td>
+                    </tr>
+                    <tr>
+                        <td>相机、pocket3</td>
+                        <td>电池（不可托运）、充电线</td>
+                    </tr>
+                    <tr>
+                        <td>衣物</td>
+                        <td>内衣裤、袜子、外套、裙子、裤子、鞋、墨镜、帽子、手套（按需2天1套）、睡衣</td>
+                    </tr>
+                    <tr>
+                        <td>杂物</td>
+                        <td>耳塞、雨伞、卫生纸（2人10天5大包8小包）、卫生巾（按需）、湿纸巾、口罩、垃圾袋、驱蚊、洗衣液、晾衣架、一次性手套马桶套</td>
+                    </tr>
+                    <tr>
+                        <td>护肤化妆</td>
+                        <td>
+                            <ul class="packing-sublist">
+                                <li>洗面奶、水乳面霜、牙刷牙膏、洗发水护发素沐浴露、洗头毛巾浴巾、面膜、刮胡刀、洗脸巾、洗手液、梳子、皮筋发夹、护手霜</li>
+                                <li>防晒霜</li>
+                                <li>长途飞行或夜宿飞机可带小包洗漱用品（卸妆、洗面奶、面霜、漱口水、唇膏、一次性拖鞋、颈枕、眼罩）</li>
+                                <li>化妆品（美瞳，化妆刷、气垫、粉底、遮瑕、定妆粉、眉笔、眼影、眼线、睫毛夹、睫毛膏、腮红、高光阴影、口红、唇膏、素颜霜、项链、耳钉、卸妆）</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>电脑、鼠标、充电线</td>
+                        <td>非必带</td>
+                    </tr>
+                    <tr>
+                        <td>旅游保险</td>
+                        <td>支付宝</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <p>HSN Journey Traces - 用脚步丈量世界</p>
+    </footer>
+
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

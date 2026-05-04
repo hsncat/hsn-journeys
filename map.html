@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>足迹地图 - HSN Journey Traces</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+        #world-map {
+            position: fixed;
+            top: 56px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: calc(100% - 56px);
+            z-index: 1;
+        }
+        .map-overlay {
+            position: fixed;
+            top: 72px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+            max-width: 280px;
+        }
+        .map-overlay h1 {
+            font-size: 1.125rem;
+            color: #18181B;
+            margin: 0 0 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .map-overlay p {
+            font-size: 0.8125rem;
+            color: #71717A;
+            margin: 0 0 0.75rem 0;
+        }
+        .map-legend {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-size: 0.75rem;
+            color: #3F3F46;
+        }
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .legend-dot.domestic {
+            background: #2563EB;
+        }
+        .legend-dot.international {
+            background: #e53e3e;
+        }
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+        }
+        .leaflet-popup-content {
+            margin: 0.5rem 0.75rem;
+            line-height: 1.5;
+        }
+        .popup-city {
+            font-weight: 600;
+            color: #18181B;
+            font-size: 1rem;
+        }
+        .popup-country {
+            color: #71717A;
+            font-size: 0.75rem;
+        }
+        .popup-count {
+            display: inline-block;
+            margin-top: 0.25rem;
+            padding: 0.125rem 0.5rem;
+            background: #EFF6FF;
+            color: #2563EB;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+        }
+        @media (max-width: 768px) {
+            .map-overlay {
+                top: 64px;
+                left: 10px;
+                right: 10px;
+                max-width: none;
+                padding: 0.75rem 1rem;
+            }
+            .map-overlay h1 {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">HSN Journey Traces</div>
+        <ul class="nav-links">
+            <li><a href="index.html">首页</a></li>
+            <li><a href="cities.html">城市足迹</a></li>
+            <li><a href="map.html" class="active">足迹地图</a></li>
+            <li><a href="wishlist.html">心愿单</a></li>
+        </ul>
+    </nav>
+
+    <div class="map-overlay">
+        <h1>🗺️ 我的足迹地图</h1>
+        <p>点击标记查看旅行记录</p>
+        <div class="map-legend">
+            <div class="legend-item">
+                <div class="legend-dot domestic"></div>
+                <span>国内</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot international"></div>
+                <span>国外</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="world-map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="data.js"></script>
+    <script src="map.js"></script>
+</body>
+</html>

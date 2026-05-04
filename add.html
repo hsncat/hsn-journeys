@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>添加旅程 - HSN Journey Traces</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .edit-form {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #18181B;
+            margin-bottom: 0.375rem;
+            font-size: 0.875rem;
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            border: 1px solid #E4E4E7;
+            border-radius: 6px;
+            font-size: 0.9375rem;
+            font-family: inherit;
+            color: #18181B;
+            background: #fff;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #2563EB;
+            box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .btn-group {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        .btn-primary {
+            background: #2563EB;
+            color: #fff;
+        }
+        .btn-secondary {
+            background: #F4F4F5;
+            color: #3F3F46;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">HSN Journey Traces</div>
+        <ul class="nav-links">
+            <li><a href="index.html">首页</a></li>
+            <li><a href="cities.html">城市足迹</a></li>
+            <li><a href="map.html">足迹地图</a></li>
+            <li><a href="wishlist.html">心愿单</a></li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        <a href="index.html" class="back-link">&larr; 返回首页</a>
+        <h1 class="page-title">+ 添加新旅程</h1>
+        <div class="edit-form">
+            <div class="form-row dense">
+                <div class="form-group">
+                    <label>省份 *</label>
+                    <input type="text" id="add-province" placeholder="例如：福建">
+                </div>
+                <div class="form-group">
+                    <label>城市 *</label>
+                    <input type="text" id="add-city" placeholder="例如：厦门">
+                </div>
+                <div class="form-group">
+                    <label>Emoji</label>
+                    <input type="text" id="add-emoji" placeholder="例如：🏝️">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>名称 *</label>
+                    <input type="text" id="add-name" placeholder="例如：冬日厦门海滨漫游">
+                </div>
+                <div class="form-group">
+                    <label>开始日期 *</label>
+                    <input type="date" id="add-date">
+                </div>
+                <div class="form-group">
+                    <label>结束日期</label>
+                    <input type="date" id="add-endDate">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>景点</label>
+                <input type="text" id="add-highlights" placeholder="例如：鼓浪屿、厦门大学、南普陀寺">
+            </div>
+            <div class="form-row dense">
+                <div class="form-group">
+                    <label>报团费 📦</label>
+                    <input type="number" id="add-cost-package" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>交通费 🚗</label>
+                    <input type="number" id="add-cost-transport" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>住宿费 🏨</label>
+                    <input type="number" id="add-cost-accommodation" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>餐饮费 🍽️</label>
+                    <input type="number" id="add-cost-food" placeholder="0">
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="saveNew()">💾 保存</button>
+                <button class="btn btn-secondary" onclick="location.href='index.html'">❌ 取消</button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>HSN Journey Traces - 用脚步丈量世界</p>
+    </footer>
+
+    <script src="data.js"></script>
+    <script>
+        const provinceInput = document.getElementById('add-province');
+        const cityInput = document.getElementById('add-city');
+        const nameInput = document.getElementById('add-name');
+
+        function autoFillName() {
+            if (nameInput.dataset.manual === 'true') return;
+            const p = provinceInput.value.trim();
+            const c = cityInput.value.trim();
+            nameInput.value = p && c && p !== c ? `${p}·${c}` : (p || c);
+        }
+
+        nameInput.addEventListener('input', () => {
+            nameInput.dataset.manual = 'true';
+        });
+        provinceInput.addEventListener('input', autoFillName);
+        cityInput.addEventListener('input', autoFillName);
+
+        function saveNew() {
+            const province = document.getElementById('add-province').value.trim();
+            const city = document.getElementById('add-city').value.trim();
+            const emoji = document.getElementById('add-emoji').value.trim() || '📍';
+            const name = document.getElementById('add-name').value.trim();
+            const date = document.getElementById('add-date').value;
+            const endDate = document.getElementById('add-endDate').value || date;
+            const highlightsStr = document.getElementById('add-highlights').value.trim();
+
+            const cost = {
+                package: document.getElementById('add-cost-package').value,
+                transport: document.getElementById('add-cost-transport').value,
+                accommodation: document.getElementById('add-cost-accommodation').value,
+                food: document.getElementById('add-cost-food').value
+            };
+
+            if (!province || !city || !name || !date) {
+                alert('省份、城市、名称和开始日期为必填项');
+                return;
+            }
+
+            const highlights = highlightsStr ? highlightsStr.split('、').map(h => h.trim()).filter(h => h) : [];
+
+            const subCard = { name, date, endDate, province, city, emoji, highlights, cost };
+            const title = province && province !== city ? `${province}·${city}` : (province || city);
+
+            const newId = addJourney({
+                province, city, emoji, date, endDate, title, highlights, cost, subCards: [subCard]
+            });
+
+            alert('添加成功！');
+            window.location.href = `detail.html?id=${newId}`;
+        }
+    </script>
+</body>
+</html>
