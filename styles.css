@@ -141,11 +141,11 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, .nav-brand, .page-title, .detail-title, .primary-title, .card-title, .wishlist-title, .city-row-name, .journey-row-title, .secondary-title {
+h1, h2, h3, .nav-brand, .page-title, .detail-title, .primary-title, .card-title, .wishlist-title, .city-row-name, .journey-row-title {
     font-family: var(--font-display);
 }
 
-a, button, .journey-card, .primary-card, .city-card, .mini-card, .secondary-card, .wishlist-card, .city-row, .journey-row {
+a, button, .journey-card, .primary-card, .city-card, .mini-card, .wishlist-card, .city-row, .journey-row {
     cursor: pointer;
 }
 
@@ -1040,29 +1040,21 @@ a, button, .journey-card, .primary-card, .city-card, .mini-card, .secondary-card
     flex-shrink: 0;
 }
 
-.secondary-cards {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    margin-left: var(--space-8);
-    padding-left: var(--space-4);
-    border-left: 2px solid var(--color-border);
+/* Card body — expandable content (photo + story + location chips) */
+.card-body {
     overflow: hidden;
     max-height: 0;
     opacity: 0;
     margin-top: 0;
-    border-left-color: transparent;
     transition: max-height var(--dur-slow) var(--ease-out),
                 opacity var(--dur-slow) var(--ease-out),
-                margin-top var(--dur-slow) var(--ease-out),
-                border-left-color var(--dur-slow) var(--ease-out);
+                margin-top var(--dur-slow) var(--ease-out);
 }
 
-.primary-card-wrapper.is-expanded .secondary-cards {
+.primary-card-wrapper.is-expanded .card-body {
     max-height: 4000px;
     opacity: 1;
-    margin-top: var(--space-3);
-    border-left-color: var(--color-border);
+    margin-top: var(--space-4);
 }
 
 .primary-card-wrapper.is-expanded .primary-arrow {
@@ -1077,66 +1069,175 @@ a, button, .journey-card, .primary-card, .city-card, .mini-card, .secondary-card
     background: var(--color-surface);
 }
 
-.secondary-card {
+/* ------------------------------------------------------------------
+   Card body — media row (photo + story two-column)
+   ------------------------------------------------------------------ */
+
+.card-media-row {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: var(--space-5);
+    margin-bottom: var(--space-4);
+}
+
+/* Photo area */
+
+.card-photo {
     display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    background: var(--color-bg);
-    border-radius: var(--radius-sm);
-    padding: var(--space-4) var(--space-5);
-    text-decoration: none;
-    color: inherit;
-    transition: box-shadow var(--dur-base) var(--ease-out),
-                background var(--dur-base) var(--ease-out),
-                border-color var(--dur-base) var(--ease-out);
-    border: 1px solid var(--color-border);
+    flex-direction: column;
+    gap: var(--space-2);
 }
 
-.secondary-card:hover {
-    box-shadow: var(--shadow-md);
-    background: var(--color-surface);
-    border-color: var(--color-border-strong);
+.card-photo__inner {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--color-surface-alt);
+    border: 1px dashed var(--color-border-strong);
+    cursor: pointer;
+    transition: border-color var(--dur-fast) var(--ease-out),
+                box-shadow var(--dur-fast) var(--ease-out);
 }
 
-.secondary-emoji {
-    font-size: var(--fs-2xl);
-    flex-shrink: 0;
-    width: 36px;
-    text-align: center;
+.card-photo__inner:hover {
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-focus);
 }
 
-.secondary-photo {
-    width: 36px;
-    height: 36px;
+.card-photo__inner.has-photo {
+    border-style: solid;
+    border-color: var(--color-border);
+}
+
+.card-photo__img {
+    width: 100%;
+    height: 100%;
     object-fit: cover;
-    border-radius: var(--radius-xs);
-    flex-shrink: 0;
+    display: block;
 }
 
-.add-subcard-btn {
+.card-photo__placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    height: 100%;
+    color: var(--color-text-subtle);
+    font-size: var(--fs-sm);
+}
+
+.card-photo__btn {
     align-self: flex-start;
-    margin-top: var(--space-1);
 }
 
-.secondary-info {
-    flex: 1;
+/* Story area */
+
+.card-story {
+    display: flex;
+    flex-direction: column;
     min-width: 0;
 }
 
-.secondary-title {
+.card-story__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.card-story__icon {
+    color: var(--color-accent);
+    display: inline-flex;
+}
+
+.card-story__title {
+    font-family: var(--font-display);
     font-size: var(--fs-lg);
     font-weight: var(--fw-semibold);
     color: var(--color-primary);
-    margin-bottom: var(--space-1);
 }
 
-.secondary-meta {
-    font-size: 13px;
+.card-story__text {
+    flex: 1;
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+    line-height: var(--lh-relaxed);
+    margin: 0 0 var(--space-3);
+    white-space: pre-line;
+    word-break: break-word;
+}
+
+.card-story__text--empty {
+    color: var(--color-text-subtle);
+    font-style: italic;
+}
+
+.card-story__editor {
+    width: 100%;
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-sm);
+    font-family: var(--font-body);
+    line-height: var(--lh-relaxed);
+    color: var(--color-text);
+    background: var(--color-surface);
+    resize: vertical;
+    margin-bottom: var(--space-3);
+    transition: border-color var(--dur-fast) var(--ease-out),
+                box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.card-story__editor:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-focus);
+}
+
+.card-story__actions {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+/* Location chips */
+
+.card-locations {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
+}
+
+.card-locations__label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--fs-sm);
     color: var(--color-text-subtle);
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-family: var(--font-body);
+    flex-shrink: 0;
+    padding-top: 2px;
+}
+
+.card-locations__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.location-chip {
+    display: inline-block;
+    padding: 2px var(--space-3);
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
+    border-radius: var(--radius-pill);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-medium);
+    line-height: var(--lh-snug);
 }
 
 .city-row {
@@ -2784,24 +2885,19 @@ body.has-modal {
         font-size: var(--fs-xs);
     }
 
-    .secondary-cards {
-        margin-left: var(--space-3);
-        padding-left: var(--space-2);
+    /* Card body — stack media row vertically on mobile */
+    .card-media-row {
+        grid-template-columns: 1fr;
+        gap: var(--space-3);
+    }
+
+    .card-photo__inner {
+        aspect-ratio: 16 / 9;
+    }
+
+    .card-locations {
+        flex-direction: column;
         gap: var(--space-2);
-    }
-
-    .secondary-card {
-        padding: var(--space-3) var(--space-4);
-        min-height: 56px;
-    }
-
-    .secondary-emoji {
-        font-size: var(--fs-xl);
-        width: 32px;
-    }
-
-    .secondary-title {
-        font-size: var(--fs-md);
     }
 
     .packing-list-card {
