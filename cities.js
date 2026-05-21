@@ -17,6 +17,12 @@
     document.addEventListener('DOMContentLoaded', function () {
         bindToolbar();
         renderGrid();
+        if (window.location.hash === '#add-subcard') {
+            setTimeout(function () {
+                showSubcardForm({ mode: 'add' });
+                history.replaceState(null, '', window.location.pathname);
+            }, 80);
+        }
     });
 
     // ------------------------------------------------------------------
@@ -60,6 +66,13 @@
                 }
             });
         }
+
+        const addBtn = document.getElementById('add-subcard-btn');
+        if (addBtn) {
+            addBtn.addEventListener('click', function () {
+                showSubcardForm({ mode: 'add' });
+            });
+        }
     }
 
     function debounce(fn, wait) {
@@ -83,6 +96,14 @@
         return true;
     }
 
+    function getFilteredJourneys() {
+        return (typeof journeys !== 'undefined' ? journeys : [])
+            .filter(passesFilter)
+            .sort(function (a, b) {
+                return String(b.date || '').localeCompare(String(a.date || ''));
+            });
+    }
+
     // ------------------------------------------------------------------
     // Grid render
     // ------------------------------------------------------------------
@@ -90,8 +111,9 @@
     function renderGrid() {
         const grid = document.getElementById('city-grid');
         if (!grid) return;
-        const list = (typeof journeys !== 'undefined' ? journeys : []).filter(passesFilter);
+        const list = getFilteredJourneys();
         grid.innerHTML = '';
+        renderTimeline(list);
 
         if (!list.length) {
             const isEmptyState = (typeof journeys !== 'undefined' ? journeys : []).length === 0;
@@ -110,6 +132,44 @@
         list.forEach(function (j) { grid.appendChild(createPrimaryCard(j)); });
     }
 
+    function renderTimeline(list) {
+        const timeline = document.getElementById('journey-timeline');
+        if (!timeline) return;
+        if (!list.length) {
+            timeline.innerHTML = '<li class="timeline-empty">暂无匹配旅程</li>';
+            return;
+        }
+
+        timeline.innerHTML = list.map(function (j, index) {
+            const year = j.date ? String(j.date).slice(0, 4) : '未知';
+            const range = formatDateRange(j.date, j.endDate);
+            const title = j.province && j.province !== j.city ? j.province + ' · ' + j.city : (j.province || j.city || '未命名旅程');
+            return ''
+                + '<li class="timeline-item' + (index === 0 ? ' is-active' : '') + '">'
+                +   '<button type="button" class="timeline-link" data-target="' + j.id + '">'
+                +     '<span class="timeline-dot" aria-hidden="true"></span>'
+                +     '<span class="timeline-year">' + esc(year) + '</span>'
+                +     '<span class="timeline-title">' + esc(title) + '</span>'
+                +     '<span class="timeline-range">' + esc(range) + '</span>'
+                +   '</button>'
+                + '</li>';
+        }).join('');
+
+        timeline.querySelectorAll('.timeline-link').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const id = btn.dataset.target;
+                const card = document.querySelector('.primary-card-wrapper[data-id="' + id + '"]');
+                if (!card) return;
+                timeline.querySelectorAll('.timeline-item').forEach(function (item) {
+                    item.classList.toggle('is-active', item.contains(btn));
+                });
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                card.classList.add('is-highlighted');
+                setTimeout(function () { card.classList.remove('is-highlighted'); }, 900);
+            });
+        });
+    }
+
     // ------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------
@@ -119,26 +179,207 @@
         return Math.round((new Date(end) - new Date(start)) / 86400000) + 1;
     }
 
+    function formatDateRange(start, end) {
+        if (!start && !end) return '未设置日期';
+        if (!end || start === end) return start || end;
+        return start + ' ~ ' + end;
+    }
+
     function formatCost(num) {
         if (num === undefined || num === null || num === '') return '—';
         return Number(num).toLocaleString();
     }
 
-    function metaHtml(date, endDate, days, cost) {
+    function metaHtml(cost, subCount) {
         cost = cost || {};
         return ''
-            + '<span title="日期">' + Icons.svg('calendar', { size: 14 }) + ' ' + esc(date || '') + ' ~ ' + esc(endDate || '') + '</span>'
-            + '<span title="天数">' + days + ' 天</span>'
+            + '<span title="二级卡片">' + Icons.svg('mapPin', { size: 14 }) + ' ' + subCount + ' 段行程</span>'
             + '<span title="报团">' + Icons.svg('package', { size: 14 }) + ' ' + esc(formatCost(cost.package)) + '</span>'
             + '<span title="交通">' + Icons.svg('car', { size: 14 }) + ' ' + esc(formatCost(cost.transport)) + '</span>'
             + '<span title="住宿">' + Icons.svg('bed', { size: 14 }) + ' ' + esc(formatCost(cost.accommodation)) + '</span>'
-            + '<span title="餐饮">' + Icons.svg('utensils', { size: 14 }) + ' ' + esc(formatCost(cost.food)) + '</span>';
+            + '<span title="餐饮">' + Icons.svg('utensils', { size: 14 }) + ' ' + esc(formatCost(cost.food)) + '</span>'
+            + '<span title="门票">' + Icons.svg('dollarSign', { size: 14 }) + ' ' + esc(formatCost(cost.ticket)) + '</span>';
     }
 
     function totalCost(cost) {
         if (!cost) return 0;
         return (Number(cost.package) || 0) + (Number(cost.transport) || 0)
-            + (Number(cost.accommodation) || 0) + (Number(cost.food) || 0);
+            + (Number(cost.accommodation) || 0) + (Number(cost.food) || 0)
+            + (Number(cost.ticket) || 0);
+    }
+
+    function unique(list) {
+        const seen = {};
+        return (list || []).filter(function (item) {
+            const key = String(item || '').trim();
+            if (!key || seen[key]) return false;
+            seen[key] = true;
+            return true;
+        });
+    }
+
+    function numericCost(cost) {
+        cost = cost || {};
+        return {
+            package: Number(cost.package) || 0,
+            transport: Number(cost.transport) || 0,
+            accommodation: Number(cost.accommodation) || 0,
+            food: Number(cost.food) || 0,
+            ticket: Number(cost.ticket) || 0,
+        };
+    }
+
+    function subcardFromJourney(journey) {
+        return {
+            id: 'sub-' + journey.id + '-1',
+            name: journey.title || journey.city || '未命名行程',
+            province: journey.province || '',
+            city: journey.city || '',
+            country: journey.country || '',
+            date: journey.date || '',
+            endDate: journey.endDate || journey.date || '',
+            emoji: journey.emoji || '📍',
+            highlights: (journey.highlights || []).slice(),
+            itineraryTable: null,
+            cost: numericCost(journey.cost),
+            story: journey.story || '',
+            photo: journey.photo || '',
+        };
+    }
+
+    function getSubcards(journey) {
+        const source = journey.subCards && journey.subCards.length ? journey.subCards : [subcardFromJourney(journey)];
+        return source.map(function (sub, index) {
+            return {
+                id: sub.id || ('sub-' + journey.id + '-' + (index + 1)),
+                name: sub.name || sub.title || sub.city || journey.title || '未命名行程',
+                province: sub.province || journey.province || '',
+                city: sub.city || journey.city || '',
+                country: sub.country || journey.country || '',
+                date: sub.date || journey.date || '',
+                endDate: sub.endDate || sub.date || journey.endDate || journey.date || '',
+                emoji: sub.emoji || journey.emoji || '📍',
+                highlights: (sub.highlights || []).slice(),
+                itineraryTable: sub.itineraryTable ? normalizeItineraryTable(sub.itineraryTable) : null,
+                cost: numericCost(sub.cost),
+                story: sub.story || '',
+                photo: sub.photo || '',
+            };
+        });
+    }
+
+    function sumCosts(subcards) {
+        return subcards.reduce(function (sum, sub) {
+            const cost = numericCost(sub.cost);
+            sum.package += cost.package;
+            sum.transport += cost.transport;
+            sum.accommodation += cost.accommodation;
+            sum.food += cost.food;
+            sum.ticket += cost.ticket;
+            return sum;
+        }, { package: 0, transport: 0, accommodation: 0, food: 0, ticket: 0 });
+    }
+
+    function syncPrimaryFromSubcards(journey, opts) {
+        opts = opts || {};
+        const subcards = getSubcards(journey);
+        if (!subcards.length) return journey;
+
+        if (subcards.length === 1) {
+            const sub = subcards[0];
+            Object.assign(journey, {
+                province: sub.province,
+                city: sub.city,
+                country: sub.country || journey.country || '中国',
+                date: sub.date,
+                endDate: sub.endDate || sub.date,
+                title: sub.name,
+                emoji: sub.emoji,
+                highlights: highlightsFromItinerary(sub),
+                cost: numericCost(sub.cost),
+                story: sub.story || journey.story || '',
+                photo: sub.photo || journey.photo || '',
+                subCards: subcards,
+            });
+            return journey;
+        }
+
+        const dates = subcards.map(function (s) { return s.date; }).filter(Boolean).sort();
+        const endDates = subcards.map(function (s) { return s.endDate || s.date; }).filter(Boolean).sort();
+        const cities = unique(subcards.map(function (s) { return s.city; }));
+        const provinces = unique(subcards.map(function (s) { return s.province; }));
+        const countries = unique(subcards.map(function (s) { return s.country; }));
+        const highlights = unique([].concat.apply([], subcards.map(highlightsFromItinerary))).slice(0, 8);
+        const allChina = countries.length === 0 || (countries.length === 1 && countries[0] === '中国');
+        const generatedTitle = cities.length > 1
+            ? cities.join('&') + '多段旅程'
+            : (cities[0] ? cities[0] + '旅程' : '多段旅程');
+
+        Object.assign(journey, {
+            province: provinces.join('&') || journey.province,
+            city: cities.join('&') || journey.city,
+            country: allChina ? '中国' : countries.join('·'),
+            date: dates[0] || journey.date,
+            endDate: endDates[endDates.length - 1] || journey.endDate || journey.date,
+            title: opts.forceTitle ? generatedTitle : (journey.title || generatedTitle),
+            highlights: highlights,
+            cost: sumCosts(subcards),
+            subCards: subcards,
+        });
+        return journey;
+    }
+
+    function defaultItineraryTable() {
+        return {
+            headers: ['日期', '上午', '下午', '备注'],
+            rows: [
+                ['', '', '', ''],
+                ['', '', '', ''],
+                ['', '', '', ''],
+            ],
+        };
+    }
+
+    function normalizeItineraryTable(table) {
+        const fallback = defaultItineraryTable();
+        if (!table || !Array.isArray(table.headers) || !Array.isArray(table.rows)) return fallback;
+        let sourceHeaders = table.headers.length ? table.headers.slice() : fallback.headers.slice();
+        const removedIndexes = [];
+        sourceHeaders = sourceHeaders.filter(function (header, index) {
+            const keep = header !== '晚上';
+            if (!keep) removedIndexes.push(index);
+            return keep;
+        });
+        const headers = sourceHeaders.map(function (h, i) {
+            return h || fallback.headers[i] || ('列' + (i + 1));
+        });
+        if (removedIndexes.length > 0) {
+            fallback.headers.forEach(function (header) {
+                if (!headers.includes(header)) headers.push(header);
+            });
+        }
+        const rows = table.rows.length ? table.rows.map(function (row) {
+            const next = Array.isArray(row) ? row.filter(function (_, index) {
+                return !removedIndexes.includes(index);
+            }) : [];
+            while (next.length < headers.length) next.push('');
+            return next.slice(0, headers.length);
+        }) : fallback.rows.map(function (row) { return row.slice(); });
+        while (rows.length < 3) rows.push(new Array(headers.length).fill(''));
+        return { headers: headers, rows: rows };
+    }
+
+    function highlightsFromItinerary(subcard) {
+        if (!subcard.itineraryTable) return (subcard.highlights || []).slice();
+        const table = normalizeItineraryTable(subcard.itineraryTable);
+        const indexes = table.headers.reduce(function (list, header, index) {
+            if (header === '上午' || header === '下午') list.push(index);
+            return list;
+        }, []);
+        if (!indexes.length) return (subcard.highlights || []).slice();
+        return unique([].concat.apply([], table.rows.map(function (row) {
+            return indexes.map(function (i) { return row[i]; });
+        })).map(function (item) { return String(item || '').trim(); })).filter(Boolean);
     }
 
     // ------------------------------------------------------------------
@@ -153,8 +394,8 @@
         const title = journey.province && journey.province !== journey.city
             ? esc(journey.province) + ' · ' + esc(journey.city)
             : esc(journey.province || journey.city);
-        const spots = (journey.highlights || []).map(esc).join(' · ');
-        const days = getDays(journey.date, journey.endDate);
+        const subcards = getSubcards(journey);
+        const spots = primarySpotsHtml(subcards);
         const emojiLabel = esc(journey.city || '') + '封面';
 
         wrapper.innerHTML = ''
@@ -162,11 +403,12 @@
             +   '<div class="primary-emoji" role="img" aria-label="' + emojiLabel + '">' + esc(journey.emoji || '📍') + '</div>'
             +   '<div class="primary-info">'
             +     '<div class="primary-title">' + title + '</div>'
-            +     '<div class="primary-meta">' + metaHtml(journey.date, journey.endDate, days, journey.cost) + '</div>'
-            +     (spots ? '<div class="primary-spots"><span class="primary-spots__icon">' + Icons.svg('sparkles', { size: 14 }) + '</span>' + spots + '</div>' : '')
+            +     '<div class="primary-meta">' + metaHtml(journey.cost, subcards.length) + '</div>'
+            +     (spots ? '<div class="primary-spots"><div class="primary-spots__lines">' + spots + '</div></div>' : '')
             +   '</div>'
             +   '<div class="primary-actions">'
-            +     '<button class="icon-btn icon-btn--sm edit-primary-btn" type="button" aria-label="编辑旅程">' + Icons.svg('edit', { size: 16 }) + '</button>'
+            +     '<button class="icon-btn icon-btn--sm add-subcard-inline-btn" type="button" aria-label="添加二级卡片">' + Icons.svg('plus', { size: 16 }) + '</button>'
+            +     '<button class="icon-btn icon-btn--sm merge-subcards-inline-btn" type="button" aria-label="合并二级卡片">' + Icons.svg('sparkles', { size: 16 }) + '</button>'
             +   '</div>'
             +   '<div class="primary-arrow" aria-hidden="true">' + Icons.svg('chevronDown', { size: 18 }) + '</div>'
             + '</div>'
@@ -175,7 +417,8 @@
 
         const primary = wrapper.querySelector('.primary-card');
         const cardBody = wrapper.querySelector('.card-body');
-        const editBtn = wrapper.querySelector('.edit-primary-btn');
+        const addSubcardBtn = wrapper.querySelector('.add-subcard-inline-btn');
+        const mergeSubcardsBtn = wrapper.querySelector('.merge-subcards-inline-btn');
         const editFormContainer = wrapper.querySelector('.primary-edit-form');
 
         function toggleBody() {
@@ -203,64 +446,403 @@
             }
         });
 
-        editBtn.addEventListener('click', function (e) {
+        addSubcardBtn.addEventListener('click', function (e) {
             e.stopPropagation();
-            wrapper.classList.remove('is-expanded');
-            primary.setAttribute('aria-expanded', 'false');
-            if (editFormContainer.hidden) {
-                showEditPrimaryForm(journey, editFormContainer);
-                editFormContainer.hidden = false;
-            } else {
-                editFormContainer.hidden = true;
-                editFormContainer.innerHTML = '';
-            }
+            showSubcardForm({ mode: 'add', journeyId: journey.id });
+        });
+
+        mergeSubcardsBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            mergeSubcards(journey.id);
         });
 
         return wrapper;
     }
 
+    function primarySpotsHtml(subcards) {
+        return getSubcards({ subCards: subcards }).map(function (subcard, index) {
+            const highlights = highlightsFromItinerary(subcard);
+            if (!highlights.length) return '';
+            const label = subcards.length > 1 ? (subcard.city || ('第' + (index + 1) + '段')) + '：' : '';
+            return '<div class="primary-spots__line"><span class="primary-spots__line-icon" aria-hidden="true">✨</span><span>' + esc(label) + highlights.map(esc).join(' · ') + '</span></div>';
+        }).filter(Boolean).join('');
+    }
+
     // ------------------------------------------------------------------
-    // Card body — photo + story (two-column) + location chips
+    // Card body — secondary cards + summary tools
     // ------------------------------------------------------------------
 
     function renderCardBody(journey, container) {
         container.innerHTML = '';
+        const subcards = getSubcards(journey);
+        const list = document.createElement('div');
+        list.className = 'secondary-card-list';
+        subcards.forEach(function (subcard, index) {
+            list.appendChild(createSecondaryCard(journey, subcard, index));
+        });
+        container.appendChild(list);
+    }
 
-        // --- media row: photo | story ---
-        const mediaRow = document.createElement('div');
-        mediaRow.className = 'card-media-row';
+    function createSecondaryCard(journey, subcard, index) {
+        const card = document.createElement('article');
+        card.className = 'secondary-card';
+        card.dataset.index = index;
+        const highlights = highlightsFromItinerary(subcard).slice(0, 5).map(function (h) {
+            return '<span class="location-chip">' + esc(h) + '</span>';
+        }).join('');
+        const costTotal = totalCost(subcard.cost);
 
-        // Photo area
-        const photoArea = document.createElement('div');
-        photoArea.className = 'card-photo';
-        renderPhotoArea(journey, photoArea);
-        mediaRow.appendChild(photoArea);
+        card.innerHTML = ''
+            + '<div class="secondary-card__date">'
+            +   '<span class="secondary-card__month">' + esc(formatTimelineMonth(subcard.date)) + '</span>'
+            +   '<span class="secondary-card__range">' + esc(formatDateRange(subcard.date, subcard.endDate)) + '</span>'
+            + '</div>'
+            + '<div class="secondary-card__body">'
+            +   '<div class="secondary-card__title-row">'
+            +     '<span class="secondary-card__emoji" role="img" aria-label="' + esc(subcard.city || '') + '">' + esc(subcard.emoji || '📍') + '</span>'
+            +     '<div>'
+            +       '<h4>' + esc(subcard.city || '未命名城市') + '</h4>'
+            +       (subcard.province ? '<p>' + esc(subcard.province) + '</p>' : '')
+            +     '</div>'
+            +   '</div>'
+            +   (highlights ? '<div class="secondary-card__chips">' + highlights + '</div>' : '')
+            +   (subcard.story ? '<p class="secondary-card__story">' + esc(subcard.story) + '</p>' : '')
+            +   '<div class="secondary-card__footer">'
+            +     '<span>' + Icons.svg('dollarSign', { size: 14 }) + ' ¥' + esc(formatCost(costTotal)) + '</span>'
+            +     '<div class="secondary-card__actions">'
+            +       '<button class="btn btn-secondary btn-sm" type="button" data-action="edit-subcard">' + Icons.svg('edit', { size: 14 }) + '<span>编辑</span></button>'
+            +       '<button class="btn btn-secondary btn-sm" type="button" data-action="delete-subcard">' + Icons.svg('trash2', { size: 14 }) + '<span>删除</span></button>'
+            +     '</div>'
+            +   '</div>'
+            + '</div>';
 
-        // Story area
-        const storyArea = document.createElement('div');
-        storyArea.className = 'card-story';
-        renderStoryArea(journey, storyArea);
-        mediaRow.appendChild(storyArea);
+        card.querySelector('[data-action="edit-subcard"]').addEventListener('click', function () {
+            showSubcardForm({ mode: 'edit', journeyId: journey.id, index: index });
+        });
+        card.querySelector('[data-action="delete-subcard"]').addEventListener('click', function () {
+            deleteSubcard(journey.id, index);
+        });
+        return card;
+    }
 
-        container.appendChild(mediaRow);
+    function formatTimelineMonth(date) {
+        if (!date) return '待定';
+        const parts = date.split('-');
+        if (parts.length < 2) return date;
+        return parts[1] + '/' + (parts[2] || '01');
+    }
 
-        // --- location chips ---
-        const locations = generateLocations(journey);
-        if (locations.length > 1) {
-            const chipsRow = document.createElement('div');
-            chipsRow.className = 'card-locations';
-            chipsRow.innerHTML = '<span class="card-locations__label">' + Icons.svg('mapPin', { size: 14 }) + ' 旅程足迹</span>';
-            const chipsList = document.createElement('div');
-            chipsList.className = 'card-locations__chips';
-            locations.forEach(function (loc) {
-                const chip = document.createElement('span');
-                chip.className = 'location-chip';
-                chip.textContent = loc.name;
-                chipsList.appendChild(chip);
-            });
-            chipsRow.appendChild(chipsList);
-            container.appendChild(chipsRow);
+    function mergeSubcards(journeyId) {
+        const journey = getJourneyById(journeyId);
+        if (!journey) return;
+        syncPrimaryFromSubcards(journey, { forceTitle: true });
+        updateJourney(journeyId, journey);
+        refreshCitiesView(journeyId);
+        HsnUI.toast('已按二级卡片汇总一级卡片', 'success');
+    }
+
+    function deleteSubcard(journeyId, index) {
+        const journey = getJourneyById(journeyId);
+        if (!journey) return;
+        const subcards = getSubcards(journey);
+        if (subcards.length <= 1) {
+            HsnUI.toast('至少保留一个二级卡片', 'error');
+            return;
         }
+        HsnUI.confirm({
+            title: '删除二级卡片',
+            message: '确定删除这段行程吗？',
+            confirmText: '删除',
+            danger: true,
+        }).then(function (ok) {
+            if (!ok) return;
+            subcards.splice(index, 1);
+            journey.subCards = subcards;
+            syncPrimaryFromSubcards(journey);
+            updateJourney(journeyId, journey);
+            refreshCitiesView(journeyId);
+            HsnUI.toast('二级卡片已删除', 'success');
+        });
+    }
+
+    function refreshCitiesView(openJourneyId) {
+        renderGrid();
+        if (!openJourneyId) return;
+        const wrapper = document.querySelector('.primary-card-wrapper[data-id="' + openJourneyId + '"]');
+        if (!wrapper) return;
+        const cardBody = wrapper.querySelector('.card-body');
+        const journey = getJourneyById(openJourneyId);
+        if (journey && cardBody) {
+            renderCardBody(journey, cardBody);
+            cardBody.dataset.loaded = 'true';
+            wrapper.classList.add('is-expanded');
+            wrapper.querySelector('.primary-card').setAttribute('aria-expanded', 'true');
+        }
+    }
+
+    function showSubcardForm(opts) {
+        opts = opts || {};
+        const isEdit = opts.mode === 'edit';
+        const journey = opts.journeyId ? getJourneyById(opts.journeyId) : null;
+        const existing = isEdit && journey ? getSubcards(journey)[opts.index] : null;
+        const data = existing || {
+            province: journey ? journey.province : '',
+            city: '',
+            country: journey ? journey.country : '中国',
+            date: journey ? journey.date : '',
+            endDate: journey ? journey.endDate : '',
+            emoji: journey ? journey.emoji : '📍',
+            itineraryTable: defaultItineraryTable(),
+            cost: {},
+            story: '',
+        };
+        const titleId = 'subcard-form-title-' + Date.now();
+        const itineraryTable = normalizeItineraryTable(data.itineraryTable);
+        const regionType = data.country && data.country !== '中国' ? 'international' : 'domestic';
+        const journeyOptions = (typeof journeys !== 'undefined' ? journeys : []).map(function (j) {
+            const label = j.province && j.province !== j.city ? j.province + ' · ' + j.city : (j.province || j.city);
+            return '<option value="' + j.id + '"' + (opts.journeyId === j.id ? ' selected' : '') + '>' + esc(label) + '</option>';
+        }).join('');
+
+        const root = document.createElement('div');
+        root.innerHTML = ''
+            + '<div class="modal__body subcard-form">'
+            +   '<h2 class="modal__title" id="' + titleId + '">' + (isEdit ? '编辑二级卡片' : '添加二级卡片') + '</h2>'
+            +   (!isEdit ? '<div class="form-group"><label for="sub-parent">归属一级卡片</label><select id="sub-parent"><option value="new">新建一级卡片</option>' + journeyOptions + '</select></div>' : '')
+            +   '<div class="form-row dense">'
+            +     '<div class="form-group"><label for="sub-emoji">图标</label><input id="sub-emoji" type="text" maxlength="4" value="' + esc(data.emoji || '📍') + '"></div>'
+            +     '<div class="form-group"><label for="sub-city">城市 *</label><input id="sub-city" type="text" value="' + esc(data.city || '') + '"></div>'
+            +     '<div class="form-group"><label for="sub-province">省份/大区</label><input id="sub-province" type="text" value="' + esc(data.province || '') + '"></div>'
+            +     '<div class="form-group"><label for="sub-region-type">国内/国外</label><select id="sub-region-type"><option value="domestic"' + (regionType === 'domestic' ? ' selected' : '') + '>国内</option><option value="international"' + (regionType === 'international' ? ' selected' : '') + '>国外</option></select></div>'
+            +   '</div>'
+            +   '<div class="form-row">'
+            +     '<div class="form-group"><label for="sub-date">开始日期 *</label><input id="sub-date" type="date" value="' + esc(data.date || '') + '"></div>'
+            +     '<div class="form-group"><label for="sub-endDate">结束日期</label><input id="sub-endDate" type="date" value="' + esc(data.endDate || data.date || '') + '"></div>'
+            +   '</div>'
+            +   '<div class="form-row cost-row">'
+            +     '<div class="form-group"><label for="sub-cost-package">报团费</label><input id="sub-cost-package" type="number" min="0" value="' + esc(data.cost && data.cost.package || '') + '"></div>'
+            +     '<div class="form-group"><label for="sub-cost-transport">交通费</label><input id="sub-cost-transport" type="number" min="0" value="' + esc(data.cost && data.cost.transport || '') + '"></div>'
+            +     '<div class="form-group"><label for="sub-cost-accommodation">住宿费</label><input id="sub-cost-accommodation" type="number" min="0" value="' + esc(data.cost && data.cost.accommodation || '') + '"></div>'
+            +     '<div class="form-group"><label for="sub-cost-food">餐饮费</label><input id="sub-cost-food" type="number" min="0" value="' + esc(data.cost && data.cost.food || '') + '"></div>'
+            +   '</div>'
+            +   renderItineraryEditorHtml(itineraryTable)
+            +   '<div class="form-group"><label for="sub-story">这段行程的故事</label><textarea id="sub-story" rows="4">' + esc(data.story || '') + '</textarea></div>'
+            + '</div>'
+            + '<div class="modal__actions">'
+            +   '<button type="button" class="btn btn-secondary" data-action="cancel">取消</button>'
+            +   '<button type="button" class="btn btn-primary" data-action="save">' + (isEdit ? '保存' : '添加') + '</button>'
+            + '</div>';
+
+        const handle = HsnUI.modal.open(root, { size: 'md', titleId: titleId });
+        wireItineraryEditor(root);
+        root.querySelector('[data-action="cancel"]').addEventListener('click', function () { handle.close(); });
+        root.querySelector('[data-action="save"]').addEventListener('click', function () {
+            const subcard = readSubcardForm(root);
+            if (!subcard.city || !subcard.date) {
+                HsnUI.toast('城市和开始日期为必填项', 'error');
+                return;
+            }
+            if (isEdit && existing && existing.id) {
+                subcard.id = existing.id;
+            }
+            if (isEdit && journey) {
+                const subcards = getSubcards(journey);
+                subcards[opts.index] = subcard;
+                journey.subCards = subcards;
+                syncPrimaryFromSubcards(journey);
+                updateJourney(journey.id, journey);
+                refreshCitiesView(journey.id);
+                HsnUI.toast('二级卡片已保存', 'success');
+            } else {
+                const parent = root.querySelector('#sub-parent').value;
+                if (parent === 'new') {
+                    const newJourney = syncPrimaryFromSubcards({
+                        id: undefined,
+                        title: subcard.city,
+                        subCards: [subcard],
+                    });
+                    const newId = addJourney(newJourney);
+                    refreshCitiesView(newId);
+                    HsnUI.toast('已添加新旅程', 'success');
+                } else {
+                    const target = getJourneyById(parent);
+                    const subcards = getSubcards(target);
+                    subcards.push(subcard);
+                    target.subCards = subcards;
+                    syncPrimaryFromSubcards(target);
+                    updateJourney(target.id, target);
+                    refreshCitiesView(target.id);
+                    HsnUI.toast('已添加二级卡片', 'success');
+                }
+            }
+            handle.close();
+        });
+
+        setTimeout(function () {
+            const first = root.querySelector('#sub-city');
+            if (first) first.focus();
+        }, 50);
+    }
+
+    function readSubcardForm(root) {
+        const get = function (id) {
+            const el = root.querySelector('#' + id);
+            return el ? el.value.trim() : '';
+        };
+        const itineraryTable = readItineraryEditor(root);
+        const city = get('sub-city');
+        const regionType = get('sub-region-type') || 'domestic';
+        return {
+            id: 'sub-' + Date.now(),
+            name: city,
+            province: get('sub-province'),
+            city: city,
+            country: regionType === 'international' ? '国外' : '中国',
+            date: get('sub-date'),
+            endDate: get('sub-endDate') || get('sub-date'),
+            emoji: get('sub-emoji') || '📍',
+            itineraryTable: itineraryTable,
+            highlights: highlightsFromItinerary({ itineraryTable: itineraryTable }),
+            cost: {
+                package: Number(get('sub-cost-package')) || 0,
+                transport: Number(get('sub-cost-transport')) || 0,
+                accommodation: Number(get('sub-cost-accommodation')) || 0,
+                food: Number(get('sub-cost-food')) || 0,
+            },
+            story: get('sub-story'),
+        };
+    }
+
+    function renderItineraryEditorHtml(table) {
+        table = normalizeItineraryTable(table);
+        const headers = table.headers.map(function (header, index) {
+            return ''
+                + '<th data-col="' + index + '">'
+                +   '<div class="itinerary-cell-frame">'
+                +     '<input type="text" class="itinerary-header-input" value="' + esc(header) + '">'
+                +     '<span class="itinerary-col-actions">'
+                +       '<button type="button" class="itinerary-action-btn" data-action="add-itinerary-col" aria-label="在右侧加列">' + Icons.svg('plus', { size: 12 }) + '</button>'
+                +       '<button type="button" class="itinerary-action-btn itinerary-action-btn--danger" data-action="delete-itinerary-col" aria-label="删除该列">' + Icons.svg('trash2', { size: 12 }) + '</button>'
+                +     '</span>'
+                +   '</div>'
+                + '</th>';
+        }).join('');
+        const rows = table.rows.map(function (row) {
+            return renderItineraryRowHtml(row, table.headers.length);
+        }).join('');
+        return ''
+            + '<div class="form-group sub-itinerary-field">'
+            +   '<label>行程</label>'
+            +   '<div class="sub-itinerary-table-wrap">'
+            +     '<table class="sub-itinerary-table">'
+            +       '<thead><tr>' + headers + '</tr></thead>'
+            +       '<tbody>' + rows + '</tbody>'
+            +     '</table>'
+            +   '</div>'
+            + '</div>';
+    }
+
+    function renderItineraryRowHtml(row, colCount) {
+        const cells = [];
+        for (let i = 0; i < colCount; i++) {
+            const actions = i === 0
+                ? '<span class="itinerary-row-actions">'
+                    + '<button type="button" class="itinerary-action-btn" data-action="add-itinerary-row" aria-label="在下方加行">' + Icons.svg('plus', { size: 12 }) + '</button>'
+                    + '<button type="button" class="itinerary-action-btn itinerary-action-btn--danger" data-action="delete-itinerary-row" aria-label="删除该行">' + Icons.svg('trash2', { size: 12 }) + '</button>'
+                + '</span>'
+                : '';
+            cells.push('<td data-col="' + i + '"><div class="itinerary-cell-frame">' + actions + '<textarea class="itinerary-cell-input" rows="2">' + esc(row && row[i] || '') + '</textarea></div></td>');
+        }
+        return '<tr>' + cells.join('') + '</tr>';
+    }
+
+    function wireItineraryEditor(root) {
+        const table = root.querySelector('.sub-itinerary-table');
+        if (!table) return;
+        table.addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-action]');
+            if (!btn || !table.contains(btn)) return;
+            e.preventDefault();
+            const action = btn.dataset.action;
+            if (action === 'add-itinerary-row') {
+                const row = btn.closest('tr');
+                const colCount = table.querySelectorAll('thead th').length;
+                row.insertAdjacentHTML('afterend', renderItineraryRowHtml([], colCount));
+            } else if (action === 'delete-itinerary-row') {
+                const row = btn.closest('tr');
+                if (table.querySelectorAll('tbody tr').length <= 1) return;
+                row.remove();
+            } else if (action === 'add-itinerary-col') {
+                const th = btn.closest('th');
+                const insertIndex = Array.from(th.parentNode.children).indexOf(th) + 1;
+                insertItineraryColumn(table, insertIndex);
+            } else if (action === 'delete-itinerary-col') {
+                const th = btn.closest('th');
+                const index = Array.from(th.parentNode.children).indexOf(th);
+                if (table.querySelectorAll('thead th').length <= 1) return;
+                deleteItineraryColumn(table, index);
+            }
+        });
+    }
+
+    function insertItineraryColumn(table, index) {
+        const colCount = table.querySelectorAll('thead th').length + 1;
+        const headerHtml = ''
+            + '<th data-col="' + index + '"><div class="itinerary-cell-frame">'
+            + '<input type="text" class="itinerary-header-input" value="列' + colCount + '">'
+            + '<span class="itinerary-col-actions">'
+            + '<button type="button" class="itinerary-action-btn" data-action="add-itinerary-col" aria-label="在右侧加列">' + Icons.svg('plus', { size: 12 }) + '</button>'
+            + '<button type="button" class="itinerary-action-btn itinerary-action-btn--danger" data-action="delete-itinerary-col" aria-label="删除该列">' + Icons.svg('trash2', { size: 12 }) + '</button>'
+            + '</span></div></th>';
+        const headerRow = table.querySelector('thead tr');
+                const beforeHeader = headerRow.children[index] || null;
+        headerRow.insertBefore(htmlToElement(headerHtml), beforeHeader);
+        table.querySelectorAll('tbody tr').forEach(function (row) {
+            const beforeCell = row.children[index] || null;
+            row.insertBefore(htmlToElement('<td data-col="' + index + '"><div class="itinerary-cell-frame"><textarea class="itinerary-cell-input" rows="2"></textarea></div></td>'), beforeCell);
+        });
+        refreshItineraryRowActions(table);
+    }
+
+    function deleteItineraryColumn(table, index) {
+        table.querySelectorAll('tr').forEach(function (row) {
+            if (row.children[index]) row.children[index].remove();
+        });
+        refreshItineraryRowActions(table);
+    }
+
+    function refreshItineraryRowActions(table) {
+        table.querySelectorAll('.itinerary-row-actions').forEach(function (node) { node.remove(); });
+        table.querySelectorAll('tbody tr').forEach(function (row) {
+            const firstCellFrame = row.querySelector('td .itinerary-cell-frame');
+            if (!firstCellFrame) return;
+            firstCellFrame.insertAdjacentHTML('afterbegin',
+                '<span class="itinerary-row-actions">'
+                + '<button type="button" class="itinerary-action-btn" data-action="add-itinerary-row" aria-label="在下方加行">' + Icons.svg('plus', { size: 12 }) + '</button>'
+                + '<button type="button" class="itinerary-action-btn itinerary-action-btn--danger" data-action="delete-itinerary-row" aria-label="删除该行">' + Icons.svg('trash2', { size: 12 }) + '</button>'
+                + '</span>'
+            );
+        });
+    }
+
+    function htmlToElement(html) {
+        const template = document.createElement('template');
+        template.innerHTML = html.trim();
+        return template.content.firstChild;
+    }
+
+    function readItineraryEditor(root) {
+        const table = root.querySelector('.sub-itinerary-table');
+        if (!table) return defaultItineraryTable();
+        const headers = Array.from(table.querySelectorAll('.itinerary-header-input')).map(function (input, index) {
+            return input.value.trim() || ('列' + (index + 1));
+        });
+        const rows = Array.from(table.querySelectorAll('tbody tr')).map(function (row) {
+            return Array.from(row.querySelectorAll('.itinerary-cell-input')).map(function (input) {
+                return input.value.trim();
+            });
+        });
+        return normalizeItineraryTable({ headers: headers, rows: rows });
     }
 
     // --- Photo ---
@@ -538,19 +1120,19 @@
     }
 
     function updatePrimaryCard(wrapper, journey) {
-        const days = getDays(journey.date, journey.endDate);
+        const subcards = getSubcards(journey);
         const title = journey.province && journey.province !== journey.city
             ? esc(journey.province) + ' · ' + esc(journey.city)
             : esc(journey.province || journey.city);
-        const spots = (journey.highlights || []).map(esc).join(' · ');
+        const spots = primarySpotsHtml(subcards);
 
         wrapper.querySelector('.primary-title').innerHTML = title;
         wrapper.querySelector('.primary-emoji').textContent = journey.emoji || '📍';
         wrapper.querySelector('.primary-emoji').setAttribute('aria-label', (journey.city || '') + '封面');
-        wrapper.querySelector('.primary-meta').innerHTML = metaHtml(journey.date, journey.endDate, days, journey.cost);
+        wrapper.querySelector('.primary-meta').innerHTML = metaHtml(journey.cost, subcards.length);
         const spotsEl = wrapper.querySelector('.primary-spots');
         if (spotsEl) {
-            spotsEl.innerHTML = '<span class="primary-spots__icon">' + Icons.svg('sparkles', { size: 14 }) + '</span>' + spots;
+            spotsEl.innerHTML = '<div class="primary-spots__lines">' + spots + '</div>';
         }
     }
 

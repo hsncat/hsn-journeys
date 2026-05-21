@@ -361,11 +361,28 @@
         // The HTML still contains <input.nav-toggle> + <label.nav-toggle-label>;
         // hide them on tablet+ and rely on the bottom tab bar on mobile.
         const toggleLabel = navbar.querySelector('.nav-toggle-label');
+        const toggleInput = navbar.querySelector('.nav-toggle');
+        const navList = navbar.querySelector('.nav-links');
+        if (navList && !navList.id) navList.id = 'primary-navigation';
         if (toggleLabel && !toggleLabel.querySelector('svg') && root.HsnIcons) {
             toggleLabel.innerHTML = root.HsnIcons.menu;
             toggleLabel.setAttribute('aria-label', '打开菜单');
             toggleLabel.setAttribute('role', 'button');
             toggleLabel.setAttribute('tabindex', '0');
+        }
+        if (toggleLabel && toggleInput && navList) {
+            toggleLabel.setAttribute('aria-controls', navList.id);
+            toggleLabel.setAttribute('aria-expanded', toggleInput.checked ? 'true' : 'false');
+            toggleInput.addEventListener('change', function () {
+                toggleLabel.setAttribute('aria-expanded', toggleInput.checked ? 'true' : 'false');
+                toggleLabel.setAttribute('aria-label', toggleInput.checked ? '关闭菜单' : '打开菜单');
+            });
+            toggleLabel.addEventListener('keydown', function (e) {
+                if (e.key !== 'Enter' && e.key !== ' ') return;
+                e.preventDefault();
+                toggleInput.checked = !toggleInput.checked;
+                toggleInput.dispatchEvent(new Event('change', { bubbles: true }));
+            });
         }
     }
 
@@ -376,7 +393,7 @@
     const TABS = [
         { id: 'home',     href: 'index.html',    icon: 'home',      label: '首页' },
         { id: 'cities',   href: 'cities.html',   icon: 'mapPin',    label: '城市' },
-        { id: 'add',      href: 'add.html',      icon: 'plus',      label: '添加', primary: true },
+        { id: 'add',      href: 'cities.html#add-subcard', icon: 'plus', label: '添加', primary: true },
         { id: 'map',      href: 'map.html',      icon: 'globe',     label: '地图' },
         { id: 'wishlist', href: 'wishlist.html', icon: 'heart',     label: '心愿' },
     ];

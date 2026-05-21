@@ -37,10 +37,19 @@
             </div>
             <div class="cities-actions">
                 <button class="btn btn-secondary" type="button" id="toggle-all-btn">展开全部</button>
-                <a href="add.html" class="btn btn-primary">添加旅程</a>
+                <button class="btn btn-primary" type="button" id="add-subcard-btn">添加旅程</button>
             </div>
         </div>
-        <div class="city-grid" id="city-grid"></div>
+        <div class="cities-layout">
+            <aside class="cities-timeline" aria-label="旅程时间线">
+                <div class="cities-timeline__header">
+                    <span class="cities-timeline__eyebrow">Timeline</span>
+                    <h2>旅行时间线</h2>
+                </div>
+                <ol class="cities-timeline__list" id="journey-timeline"></ol>
+            </aside>
+            <div class="city-grid" id="city-grid"></div>
+        </div>
     </main>
 
     <footer class="footer">
