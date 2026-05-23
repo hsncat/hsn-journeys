@@ -1,0 +1,174 @@
+---
+import Icons from './Icons.astro';
+
+export interface Props {
+  currentPage?: 'home' | 'cities' | 'map' | 'wishlist' | 'detail' | 'add';
+}
+
+const { currentPage } = Astro.props;
+---
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a class="nav-brand" href="/">HSN Journey Traces</a>
+
+    <details class="nav-menu-toggle">
+      <summary class="nav-menu-summary" aria-label="打开菜单">
+        <Icons name="menu" size={24} />
+      </summary>
+      <ul class="nav-links">
+        <li><a href="/" aria-current={currentPage === 'home' ? 'page' : undefined}>首页</a></li>
+        <li><a href="/cities" aria-current={currentPage === 'cities' ? 'page' : undefined}>城市足迹</a></li>
+        <li><a href="/map" aria-current={currentPage === 'map' ? 'page' : undefined}>足迹地图</a></li>
+        <li><a href="/wishlist" aria-current={currentPage === 'wishlist' ? 'page' : undefined}>心愿单</a></li>
+      </ul>
+    </details>
+
+    <ul class="nav-links nav-links--desktop">
+      <li><a href="/" aria-current={currentPage === 'home' ? 'page' : undefined}>首页</a></li>
+      <li><a href="/cities" aria-current={currentPage === 'cities' ? 'page' : undefined}>城市足迹</a></li>
+      <li><a href="/map" aria-current={currentPage === 'map' ? 'page' : undefined}>足迹地图</a></li>
+      <li><a href="/wishlist" aria-current={currentPage === 'wishlist' ? 'page' : undefined}>心愿单</a></li>
+    </ul>
+
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="切换深色模式" title="切换深色/浅色模式">
+      <span class="theme-toggle__icon-dark">🌙</span>
+      <span class="theme-toggle__icon-light">☀️</span>
+    </button>
+  </div>
+</nav>
+
+<script>
+  const toggle = document.getElementById('theme-toggle');
+  if (toggle) {
+    const darkIcon = toggle.querySelector('.theme-toggle__icon-dark');
+    const lightIcon = toggle.querySelector('.theme-toggle__icon-light');
+
+    function setThemeUI(theme: string) {
+      const isDark = theme === 'dark';
+      if (darkIcon) (darkIcon as HTMLElement).style.display = isDark ? 'none' : '';
+      if (lightIcon) (lightIcon as HTMLElement).style.display = isDark ? '' : 'none';
+    }
+
+    // Initialize
+    const current = document.documentElement.getAttribute('data-theme');
+    setThemeUI(current || 'light');
+
+    toggle.addEventListener('click', () => {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch (_) {}
+      setThemeUI(next);
+    });
+  }
+</script>
+
+<style>
+  .navbar {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-navbar);
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    height: var(--navbar-height);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-4);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+
+  .navbar-inner {
+    width: 100%;
+    max-width: var(--container-wide);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-brand {
+    font-family: var(--font-heading);
+    font-size: var(--fs-xl);
+    color: var(--color-text-inverse);
+    text-decoration: none;
+    letter-spacing: 0.02em;
+  }
+  .nav-brand:hover { color: var(--color-text-inverse); }
+
+  /* Desktop nav */
+  .nav-links--desktop {
+    display: none;
+    list-style: none;
+    gap: var(--space-1);
+  }
+
+  .nav-links--desktop a {
+    color: rgba(255,255,255,0.75);
+    text-decoration: none;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .nav-links--desktop a:hover,
+  .nav-links--desktop a[aria-current="page"] {
+    color: #fff;
+    background: rgba(255,255,255,0.12);
+  }
+
+  /* Mobile menu (details/summary — zero JS) */
+  .nav-menu-toggle {
+    display: block;
+    position: relative;
+  }
+
+  .nav-menu-toggle .nav-links {
+    list-style: none;
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    right: 0;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-2);
+    min-width: 160px;
+    z-index: var(--z-sticky);
+  }
+
+  .nav-menu-toggle .nav-links a {
+    display: block;
+    color: var(--color-text);
+    text-decoration: none;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .nav-menu-toggle .nav-links a:hover,
+  .nav-menu-toggle .nav-links a[aria-current="page"] {
+    background: var(--color-primary-soft);
+  }
+
+  .nav-menu-summary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-inverse);
+    cursor: pointer;
+    list-style: none;
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .nav-menu-summary::-webkit-details-marker { display: none; }
+  .nav-menu-summary:hover { background: rgba(255,255,255,0.12); }
+
+  @media (min-width: 768px) {
+    .nav-links--desktop { display: flex; }
+    .nav-menu-toggle { display: none; }
+  }
+</style>

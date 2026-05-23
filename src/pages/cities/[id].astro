@@ -1,0 +1,419 @@
+---
+import PageLayout from '@layouts/PageLayout.astro';
+import CostRow from '@components/CostRow.astro';
+import HighlightChips from '@components/HighlightChips.astro';
+import ItineraryTable from '@components/ItineraryTable.astro';
+import PhotoLightbox from '@components/PhotoLightbox.astro';
+import Icons from '@components/Icons.astro';
+import { getJourneyById } from '@lib/d1-client';
+import { getDays, sumCosts } from '@lib/journey-helpers';
+import type { Journey } from '@lib/types';
+
+export const prerender = false;
+
+const runtime = Astro.locals.runtime;
+let journey: Journey | null = null;
+const id = Number(Astro.params.id);
+
+if (runtime?.env?.DB && !isNaN(id)) {
+  try {
+    journey = await getJourneyById(runtime.env.DB, id);
+  } catch (_) { /* will 404 below */ }
+}
+
+if (!journey) {
+  return new Response('Not Found', { status: 404 });
+}
+
+const days = getDays(journey);
+const totalCost = sumCosts(journey.costs);
+const hasSubCards = journey.subCards && journey.subCards.length > 0;
+---
+
+<PageLayout title={journey.title || journey.city} currentPage="detail">
+  <div class="container detail-page">
+    <a href="/cities" class="back-link">
+      <Icons name="arrowLeft" size={18} />
+      <span>返回城市足迹</span>
+    </a>
+
+    <header class="detail-header">
+      <div class="detail-emoji" aria-hidden="true">{journey.emoji || '📍'}</div>
+      <div class="detail-header__info">
+        <h1 class="detail-title">{journey.title || journey.city}</h1>
+        <div class="detail-meta">
+          <span>{journey.country} · {journey.province} · {journey.city}</span>
+          <span>{journey.date}{journey.endDate && journey.endDate !== journey.date ? ` ~ ${journey.endDate}` : ''}</span>
+          <span>{days} 天</span>
+        </div>
+        <CostRow costs={journey.costs} showLabel />
+        {totalCost > 0 && (
+          <div class="detail-total-cost">
+            总费用: ¥{totalCost.toLocaleString()}
+          </div>
+        )}
+      </div>
+    </header>
+
+    {journey.description && (
+      <p class="detail-description">{journey.description}</p>
+    )}
+
+    {journey.highlights.length > 0 && (
+      <section class="detail-section">
+        <h2>精彩亮点</h2>
+        <HighlightChips highlights={journey.highlights} variant="blue" />
+      </section>
+    )}
+
+    {journey.itinerary.length > 0 && (
+      <section class="detail-section">
+        <ItineraryTable itinerary={journey.itinerary} />
+      </section>
+    )}
+
+    {journey.story && (
+      <section class="detail-section">
+        <h2>旅行故事</h2>
+        <p class="detail-story">{journey.story}</p>
+      </section>
+    )}
+
+    {journey.photoKey && (
+      <section class="detail-section">
+        <PhotoLightbox
+          src={journey.photoUrl || journey.photoKey}
+          photoKey={journey.photoKey}
+          alt={journey.title || journey.city}
+        />
+      </section>
+    )}
+
+    {hasSubCards && (
+      <section class="detail-section">
+        <h2>子行程 ({journey.subCards.length})</h2>
+        <div class="subcards">
+          {journey.subCards.map((sub) => (
+            <div class="subcard">
+              <header class="subcard-header">
+                <span class="subcard-emoji" aria-hidden="true">{sub.emoji || '📍'}</span>
+                <div>
+                  <h3 class="subcard-title">{sub.name}</h3>
+                  <span class="subcard-meta">
+                    {sub.country} · {sub.province} · {sub.city}
+                    {sub.date && ` · ${sub.date}`}
+                    {sub.endDate && sub.endDate !== sub.date ? ` ~ ${sub.endDate}` : ''}
+                  </span>
+                  <CostRow costs={sub.costs} showLabel />
+                </div>
+              </header>
+              {sub.story && <p class="subcard-story">{sub.story}</p>}
+              {sub.highlights.length > 0 && (
+                <div class="subcard-highlights">
+                  <h4>亮点</h4>
+                  <HighlightChips
+                    highlights={sub.highlights.map((h: any) => ({
+                      id: h.id || 0,
+                      journeyId: journey!.id,
+                      text: typeof h === 'string' ? h : h.text,
+                      sortOrder: h.sortOrder || 0,
+                    }))}
+                    variant="green"
+                  />
+                </div>
+              )}
+              {sub.itineraryTable && sub.itineraryTable.rows.length > 0 && (
+                <div class="subcard-itinerary">
+                  <h4>行程</h4>
+                  <div class="itinerary-table-wrap">
+                    <table class="itinerary-table">
+                      <thead>
+                        <tr>
+                          {sub.itineraryTable.headers.map((h: string) => <th>{h}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sub.itineraryTable.rows.map((row: string[]) => (
+                          <tr>
+                            {row.map((cell: string) => <td>{cell}</td>)}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="itinerary-cards">
+                    {sub.itineraryTable.rows.map((row: string[]) => (
+                      <div class="itinerary-card">
+                        {sub.itineraryTable.headers.map((h: string, i: number) => (
+                          <div class="itinerary-card__row">
+                            <span class="itinerary-card__label">{h}</span>
+                            <span>{row[i] || ''}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {sub.photoKey && (
+                <PhotoLightbox
+                  src={sub.photoUrl || sub.photoKey}
+                  photoKey={sub.photoKey}
+                  alt={sub.name}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+    )}
+  </div>
+</PageLayout>
+
+<style>
+  .detail-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding-top: var(--space-6);
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-4) 0;
+    color: var(--color-text-muted);
+    font-size: var(--fs-sm);
+    text-decoration: none;
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .back-link:hover { color: var(--color-accent); }
+
+  .detail-header {
+    display: flex;
+    gap: var(--space-6);
+    align-items: flex-start;
+    margin-bottom: var(--space-8);
+    padding: var(--space-6);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+  }
+
+  @media (max-width: 600px) {
+    .detail-header {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+  }
+
+  .detail-emoji {
+    font-size: 4rem;
+    width: 96px;
+    height: 96px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
+    line-height: 1;
+  }
+
+  .detail-header__info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .detail-title {
+    font-family: var(--font-heading);
+    font-size: var(--fs-3xl);
+    margin: 0;
+    line-height: var(--lh-tight);
+  }
+
+  .detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+  }
+  .detail-meta span + span::before {
+    content: '|';
+    margin-right: var(--space-2);
+    color: var(--color-border-strong);
+  }
+
+  .detail-total-cost {
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+    margin-top: var(--space-1);
+  }
+
+  .detail-section {
+    margin: var(--space-8) 0;
+  }
+
+  .detail-section h2 {
+    font-family: var(--font-heading);
+    font-size: var(--fs-xl);
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-2);
+    border-bottom: 2px solid var(--color-border);
+  }
+
+  .detail-description {
+    font-size: var(--fs-base);
+    line-height: var(--lh-relaxed);
+    color: var(--color-text-muted);
+    margin: var(--space-4) 0;
+  }
+
+  .detail-story {
+    font-size: var(--fs-base);
+    line-height: var(--lh-relaxed);
+    white-space: pre-wrap;
+    background: var(--color-surface);
+    padding: var(--space-6);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+
+  /* Subcards */
+  .subcards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .subcard {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .subcard-header {
+    display: flex;
+    gap: var(--space-3);
+    align-items: flex-start;
+  }
+
+  .subcard-emoji {
+    font-size: 2.5rem;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+  }
+
+  .subcard-title {
+    font-family: var(--font-heading);
+    font-size: var(--fs-xl);
+    margin: 0;
+  }
+
+  .subcard-meta {
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+  }
+
+  .subcard-story {
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+    line-height: var(--lh-relaxed);
+    white-space: pre-wrap;
+  }
+
+  .subcard-highlights h4,
+  .subcard-itinerary h4 {
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-2);
+  }
+
+  /* Itinerary table (shared by both detail and subcard) */
+  .itinerary-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .itinerary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-sm);
+    display: none;
+  }
+
+  .itinerary-table th,
+  .itinerary-table td {
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .itinerary-table th {
+    background: var(--color-surface-alt);
+    font-weight: var(--fw-semibold);
+    white-space: nowrap;
+    color: var(--color-text-muted);
+  }
+
+  @media (min-width: 768px) {
+    .itinerary-table { display: table; }
+    .itinerary-cards { display: none; }
+  }
+
+  .itinerary-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  @media (min-width: 768px) {
+    .itinerary-cards { display: none; }
+  }
+
+  .itinerary-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .itinerary-card__row {
+    display: flex;
+    gap: var(--space-2);
+    font-size: var(--fs-sm);
+  }
+
+  .itinerary-card__label {
+    color: var(--color-text-muted);
+    font-weight: var(--fw-medium);
+    min-width: 40px;
+    flex-shrink: 0;
+  }
+
+  .container {
+    width: 100%;
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--space-4);
+  }
+</style>

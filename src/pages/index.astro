@@ -1,0 +1,188 @@
+---
+import PageLayout from '@layouts/PageLayout.astro';
+import StatCard from '@components/StatCard.astro';
+import JourneyCard from '@components/JourneyCard.astro';
+import PackingList from '@components/PackingList.astro';
+import EmptyState from '@components/EmptyState.astro';
+import { getJourneys, getStats, getPacking } from '@lib/d1-client';
+import { loadJourneys, loadPacking, getSSGStats } from '@lib/ssg-data';
+import type { Journey, PageStats, PackingCategory } from '@lib/types';
+
+const runtime = Astro.locals.runtime;
+let journeys: Journey[];
+let stats: PageStats;
+let packing: PackingCategory[];
+
+const db = runtime?.env?.DB;
+if (db) {
+  [journeys, stats, packing] = await Promise.all([
+    getJourneys(db),
+    getStats(db),
+    getPacking(db),
+  ]);
+} else {
+  journeys = loadJourneys();
+  stats = getSSGStats();
+  packing = loadPacking();
+}
+
+const recent = journeys.slice(0, 6);
+const totalCostDisplay = stats.totalCost > 0
+  ? '¥' + (stats.totalCost / 10000).toFixed(1) + '万'
+  : '—';
+---
+
+<PageLayout title="旅行足迹" currentPage="home">
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-content">
+      <h1>探索世界的每一步</h1>
+      <p>记录美好生活</p>
+      <a class="btn btn-primary btn-lg" href="/cities">查看我的足迹</a>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="stats section">
+    <StatCard label="足迹城市" value={stats.cityCount} emoji="📍" />
+    <StatCard label="旅行记录" value={stats.journeyCount} emoji="✈️" />
+    <StatCard label="总费用" value={totalCostDisplay} emoji="💰" />
+  </section>
+
+  <!-- Recent Journeys -->
+  <section class="section container">
+    <h2>最近旅程</h2>
+    {recent.length > 0 ? (
+      <div class="journey-grid">
+        {recent.map((j) => <JourneyCard journey={j} href={`/cities/${j.id}`} />)}
+      </div>
+    ) : (
+      <EmptyState
+        icon="compass"
+        title="还没有旅程记录"
+        description="开始记录你的第一次旅行吧"
+        actionText="添加旅程"
+        actionHref="/admin/journeys/new"
+      />
+    )}
+  </section>
+
+  <!-- Packing List -->
+  {packing.length > 0 && (
+    <section class="section container">
+      <details class="packing-details">
+        <summary>
+          <h2>行李清单</h2>
+        </summary>
+        <PackingList categories={packing} />
+      </details>
+    </section>
+  )}
+</PageLayout>
+
+<style>
+  .hero {
+    background: linear-gradient(135deg, var(--color-primary) 0%, #27272A 100%);
+    color: var(--color-text-inverse);
+    padding: var(--space-20) var(--space-4);
+    text-align: center;
+  }
+
+  .hero-content {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .hero h1 {
+    font-family: var(--font-heading);
+    font-size: var(--fs-5xl);
+    color: #fff;
+    margin-bottom: var(--space-4);
+    line-height: var(--lh-tight);
+  }
+
+  .hero p {
+    font-size: var(--fs-lg);
+    color: rgba(255,255,255,0.7);
+    margin-bottom: var(--space-8);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-6);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .btn-primary {
+    background: var(--color-accent);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background: var(--color-accent-hover);
+    color: #fff;
+  }
+  .btn-lg {
+    padding: var(--space-3) var(--space-8);
+    font-size: var(--fs-base);
+  }
+
+  .section {
+    margin-top: var(--space-12);
+  }
+
+  .section h2 {
+    margin-bottom: var(--space-6);
+  }
+
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    justify-content: center;
+    padding: 0 var(--space-4);
+  }
+
+  .journey-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-4);
+    list-style: none;
+  }
+
+  @media (max-width: 480px) {
+    .journey-grid {
+      grid-template-columns: 1fr;
+    }
+    .hero h1 { font-size: var(--fs-3xl); }
+  }
+
+  .packing-details {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  .packing-details summary {
+    display: flex;
+    align-items: center;
+    padding: var(--space-4);
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+  }
+  .packing-details summary::-webkit-details-marker { display: none; }
+
+  .packing-details summary h2 {
+    margin: 0;
+    font-family: var(--font-heading);
+    font-size: var(--fs-xl);
+  }
+</style>

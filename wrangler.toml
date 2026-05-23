@@ -1,0 +1,17 @@
+name = "hsn-journeys"
+pages_build_output_dir = "./dist"
+compatibility_date = "2025-05-23"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hsn-journeys-db"
+database_id = "56c2b4ec-59cc-4ded-8bd1-b21c4d6d4d60"
+
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "hsn-journeys-photos"
+
+
+[observability]
+enabled = true

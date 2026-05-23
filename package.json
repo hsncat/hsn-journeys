@@ -1,0 +1,47 @@
+{
+  "name": "hsn-journeys",
+  "version": "2.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "wrangler pages dev ./dist",
+    "deploy": "astro build && wrangler pages deploy ./dist --branch=main",
+    "db:migrate": "wrangler d1 execute hsn-journeys-db --file=./migrations/0001_initial_schema.sql",
+    "db:migrate:local": "wrangler d1 execute hsn-journeys-db --local --file=./migrations/0001_initial_schema.sql",
+    "db:seed": "npx tsx scripts/seed-from-json.ts",
+    "photos:migrate": "npx tsx scripts/migrate-photos-to-r2.ts"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@astrojs/cloudflare": "^12.0.0",
+    "@astrojs/react": "^4.0.0",
+    "@dnd-kit/core": "^6.1.0",
+    "@dnd-kit/sortable": "^8.0.0",
+    "@dnd-kit/utilities": "^3.2.0",
+    "@tanstack/react-query": "^5.60.0",
+    "astro": "^5.0.0",
+    "bcryptjs": "^2.4.3",
+    "drizzle-orm": "^0.38.0",
+    "hono": "^4.0.0",
+    "jose": "^5.9.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "react-hot-toast": "^2.4.0",
+    "react-router-dom": "^6.28.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^25.9.1",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "drizzle-kit": "^0.30.0",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.0.0"
+  }
+}

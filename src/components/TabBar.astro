@@ -1,0 +1,124 @@
+---
+export interface Props {
+  currentPage?: 'home' | 'cities' | 'map' | 'wishlist' | 'detail' | 'add';
+}
+
+const { currentPage } = Astro.props;
+
+const TABS = [
+  { id: 'home',     href: '/',            label: '首页' },
+  { id: 'cities',   href: '/cities',      label: '城市' },
+  { id: 'add',      href: '/admin/journeys/new', label: '添加', primary: true },
+  { id: 'map',      href: '/map',         label: '地图' },
+  { id: 'wishlist', href: '/wishlist',    label: '心愿' },
+];
+
+function isActive(id: string): boolean {
+  if (id === currentPage) return true;
+  if (id === 'cities' && currentPage === 'detail') return true;
+  return false;
+}
+---
+
+<nav class="tabbar" aria-label="主导航">
+  <ul class="tabbar__list">
+    {TABS.map((tab) => (
+      <li class={`tabbar__item${tab.primary ? ' tabbar__item--primary' : ''}`}>
+        <a
+          href={tab.href}
+          class={`tabbar__link${isActive(tab.id) ? ' is-active' : ''}`}
+          aria-label={tab.label}
+          {...(isActive(tab.id) ? { 'aria-current': 'page' as const } : {})}
+        >
+          <span class="tabbar__icon">{tab.primary ? '+' : tab.label[0]}</span>
+          <span class="tabbar__label">{tab.label}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</nav>
+
+<style>
+  .tabbar {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: var(--z-tabbar);
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    height: var(--tabbar-height);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  @media (max-width: 767px) {
+    .tabbar { display: block; }
+  }
+
+  .tabbar__list {
+    display: flex;
+    list-style: none;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .tabbar__item {
+    flex: 1;
+    display: flex;
+  }
+
+  .tabbar__link {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    text-decoration: none;
+    color: var(--color-text-muted);
+    font-size: 10px;
+    font-weight: var(--fw-medium);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .tabbar__link:hover,
+  .tabbar__link.is-active {
+    color: var(--color-accent);
+  }
+
+  .tabbar__icon {
+    font-size: 22px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+  }
+
+  .tabbar__label {
+    line-height: 1;
+  }
+
+  /* FAB primary */
+  .tabbar__item--primary .tabbar__link {
+    position: relative;
+    top: -20px;
+  }
+  .tabbar__item--primary .tabbar__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    color: white;
+    font-size: 28px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px var(--color-accent-glow);
+    transition: background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .tabbar__item--primary .tabbar__link:hover .tabbar__icon {
+    background: var(--color-accent-hover);
+    box-shadow: 0 6px 16px var(--color-accent-glow);
+  }
+</style>

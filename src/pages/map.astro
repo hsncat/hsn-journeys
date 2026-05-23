@@ -1,0 +1,273 @@
+---
+import PageLayout from '@layouts/PageLayout.astro';
+import { getJourneys, getCoordinates } from '@lib/d1-client';
+import { loadJourneys, loadCoordinates } from '@lib/ssg-data';
+import { getLocationList } from '@lib/journey-helpers';
+import type { Journey, CityCoordinate } from '@lib/types';
+
+const runtime = Astro.locals.runtime;
+let journeys: Journey[];
+let coordinates: CityCoordinate[];
+
+if (runtime?.env?.DB) {
+  [journeys, coordinates] = await Promise.all([
+    getJourneys(runtime.env.DB),
+    getCoordinates(runtime.env.DB),
+  ]);
+} else {
+  journeys = loadJourneys();
+  coordinates = loadCoordinates();
+}
+
+const locationList = getLocationList(journeys);
+
+const markers = JSON.stringify(
+  locationList.map((loc) => {
+    const coord = coordinates.find(
+      (c) => c.name === loc.name && c.country === loc.country
+    );
+    return {
+      name: loc.name,
+      country: loc.country,
+      type: coord?.type || (loc.country === '中国' ? 'domestic' : 'international'),
+      lat: coord?.lat ?? null,
+      lng: coord?.lng ?? null,
+      count: loc.count,
+      journeys: loc.journeys.map((j) => ({
+        id: j.id,
+        title: j.title || j.city,
+        emoji: j.emoji,
+        date: j.date,
+      })),
+    };
+  })
+);
+---
+
+<PageLayout title="足迹地图" currentPage="map">
+  <div class="map-page">
+    <div id="world-map"></div>
+
+    <aside class="map-overlay" aria-label="地图说明">
+      <h1 class="map-overlay__title">
+        <span class="map-overlay__title-icon" aria-hidden="true">🗺️</span>
+        <span>我的足迹地图</span>
+      </h1>
+      <p class="map-overlay__desc">点击标记查看旅行记录</p>
+      <div class="map-legend" role="group" aria-label="图例">
+        <div class="legend-item">
+          <span class="legend-dot legend-dot--domestic" aria-hidden="true"></span>
+          <span>国内</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot legend-dot--international" aria-hidden="true"></span>
+          <span>国外</span>
+        </div>
+      </div>
+      <div class="map-stats">
+        <span>共 {locationList.length} 个地点</span>
+        <span>· {journeys.length} 次旅程</span>
+      </div>
+    </aside>
+  </div>
+
+  <script is:inline define:vars={{ markers }}>
+    // vars: markers is injected from server-side — stringified JSON array
+
+    (function() {
+      var link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+
+      var script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = initMap;
+      document.head.appendChild(script);
+
+      function initMap() {
+        var mapEl = document.getElementById('world-map');
+        if (!mapEl || !window.L) return;
+
+        var L = window.L;
+        var map = L.map('world-map').setView([30, 110], 4);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+          maxZoom: 19,
+        }).addTo(map);
+
+        var domesticColor = '#2563EB';
+        var internationalColor = '#e53e3e';
+
+        var fallbackCoords = {
+          '北京': [39.9, 116.4], '上海': [31.2, 121.5], '广州': [23.1, 113.3],
+          '深圳': [22.5, 114.1], '成都': [30.6, 104.1], '重庆': [29.6, 106.5],
+          '杭州': [30.3, 120.2], '南京': [32.1, 118.8], '武汉': [30.6, 114.3],
+          '西安': [34.3, 108.9], '厦门': [24.5, 118.1], '昆明': [25.0, 102.7],
+          '贵阳': [26.6, 106.7], '长沙': [28.2, 112.9], '郑州': [34.7, 113.6],
+          '青岛': [36.1, 120.4], '大连': [38.9, 121.6], '三亚': [18.2, 109.5],
+          '哈尔滨': [45.8, 126.5], '乌鲁木齐': [43.8, 87.6], '拉萨': [29.6, 91.1],
+          '桂林': [25.3, 110.3], '阳朔': [24.8, 110.5], '苏州': [31.3, 120.6],
+          '天津': [39.1, 117.2], '香港': [22.3, 114.2], '澳门': [22.2, 113.5],
+          '台北': [25.0, 121.5], '东京': [35.7, 139.7], '大阪': [34.7, 135.5],
+          '京都': [35.0, 135.8], '首尔': [37.6, 127.0], '曼谷': [13.8, 100.5],
+          '新加坡': [1.35, 103.8], '巴黎': [48.9, 2.35], '伦敦': [51.5, -0.13],
+          '罗马': [41.9, 12.5], '米兰': [45.5, 9.19], '威尼斯': [45.4, 12.3],
+          '巴塞罗那': [41.4, 2.17], '马德里': [40.4, -3.7], '柏林': [52.5, 13.4],
+          '悉尼': [-33.9, 151.2], '墨尔本': [-37.8, 145.0], '纽约': [40.7, -74.0],
+          '洛杉矶': [34.1, -118.2], '旧金山': [37.8, -122.4], '马尔代夫': [4.18, 73.51],
+          '巴厘岛': [-8.34, 115.1], '普吉岛': [7.88, 98.4], '清迈': [18.8, 98.99],
+          '瑞士': [46.8, 8.23], '因特拉肯': [46.7, 7.85], '卢塞恩': [47.1, 8.31],
+          '法国': [46.6, 2.21], '意大利': [41.9, 12.5], '迪拜': [25.2, 55.27],
+          '阿布扎比': [24.5, 54.37], '伊斯坦布尔': [41.0, 28.98], '莫斯科': [55.8, 37.6],
+          '圣彼得堡': [59.9, 30.3], '冰岛': [64.1, -21.9], '雷克雅未克': [64.1, -21.9],
+          '挪威': [60.5, 8.47], '奈良': [34.7, 135.8], '箱根': [35.2, 139.0],
+          '富士山': [35.4, 138.7]
+        };
+
+        var data = JSON.parse(markers);
+
+        var allCoords = [];
+
+        data.forEach(function(m) {
+          var lat = m.lat;
+          var lng = m.lng;
+
+          if (lat == null || lng == null) {
+            var fb = fallbackCoords[m.name];
+            if (fb) { lat = fb[0]; lng = fb[1]; } else { return; }
+          }
+
+          allCoords.push([lat, lng]);
+
+          var isDomestic = m.type === 'domestic';
+          var color = isDomestic ? domesticColor : internationalColor;
+
+          var circle = L.circleMarker([lat, lng], {
+            radius: Math.min(8 + m.count * 2, 24),
+            fillColor: color,
+            color: '#fff',
+            weight: 2,
+            fillOpacity: 0.85,
+          }).addTo(map);
+
+          var journeyList = m.journeys.map(function(j) {
+            return '<a href="/cities/' + j.id + '" style="display:block;padding:2px 0;color:#2563EB;text-decoration:none;">' + j.emoji + ' ' + j.title + ' (' + j.date + ')</a>';
+          }).join('');
+
+          circle.bindPopup(
+            '<strong>' + m.name + '</strong><br>' +
+            '<span style="color:#71717A;font-size:0.85em;">' + m.country + ' · ' + m.count + ' 次旅行</span>' +
+            '<div style="margin-top:4px;">' + journeyList + '</div>'
+          );
+        });
+
+        if (allCoords.length > 0) {
+          map.fitBounds(allCoords, { padding: [40, 40] });
+        }
+
+        setTimeout(function() { map.invalidateSize(); }, 100);
+      }
+    })();
+  </script>
+</PageLayout>
+
+<style>
+  .map-page {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - var(--navbar-height) - var(--tabbar-height, 0px));
+    margin: 0;
+    padding: 0;
+  }
+
+  #world-map {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+
+  .map-overlay {
+    position: absolute;
+    top: var(--space-4);
+    left: var(--space-4);
+    z-index: var(--z-sticky);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    box-shadow: var(--shadow-md);
+    min-width: 220px;
+    max-width: 300px;
+  }
+
+  @media (max-width: 600px) {
+    .map-overlay {
+      top: auto;
+      bottom: calc(var(--tabbar-height, 64px) + var(--space-2));
+      left: var(--space-2);
+      right: var(--space-2);
+      max-width: none;
+      padding: var(--space-3);
+    }
+  }
+
+  .map-overlay__title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-family: var(--font-heading);
+    font-size: var(--fs-lg);
+    margin: 0 0 var(--space-2);
+    color: var(--color-primary);
+  }
+
+  .map-overlay__title-icon { font-size: 1.5rem; }
+
+  .map-overlay__desc {
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+    margin: 0 0 var(--space-3);
+  }
+
+  .map-legend {
+    display: flex;
+    gap: var(--space-4);
+    margin-bottom: var(--space-2);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+  }
+
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .legend-dot--domestic { background: #2563EB; }
+  .legend-dot--international { background: #e53e3e; }
+
+  .map-stats {
+    font-size: var(--fs-xs);
+    color: var(--color-text-faint);
+  }
+
+  :global(.leaflet-popup-content) {
+    font-family: var(--font-body);
+    font-size: var(--fs-sm) !important;
+  }
+
+  :global(.leaflet-popup-content strong) {
+    font-family: var(--font-heading);
+    font-size: var(--fs-base);
+  }
+</style>

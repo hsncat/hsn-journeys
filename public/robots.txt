@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Sitemap: https://hsn-journeys.pages.dev/sitemap.xml

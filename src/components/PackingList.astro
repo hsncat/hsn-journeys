@@ -1,0 +1,109 @@
+---
+import type { PackingCategory } from '@lib/types';
+
+export interface Props {
+  categories: PackingCategory[];
+}
+
+const { categories } = Astro.props;
+---
+
+<div class="packing-list">
+  {categories.map((cat) => (
+    <details class="packing-category" open={cat.sortOrder === 0}>
+      <summary class="packing-category__summary">
+        <h3>{cat.name}</h3>
+        <span class="packing-category__toggle" aria-hidden="true"></span>
+      </summary>
+      <ul class="packing-category__items">
+        {cat.items.map((item) => (
+          <li class="packing-item">
+            <label class="packing-item__label">
+              <input type="checkbox" checked={item.checked} disabled />
+              <span>{item.item}</span>
+            </label>
+            {item.note && <span class="packing-item__note">{item.note}</span>}
+          </li>
+        ))}
+      </ul>
+    </details>
+  ))}
+</div>
+
+<style>
+  .packing-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .packing-category {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  .packing-category__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4);
+    cursor: pointer;
+    user-select: none;
+    font-weight: var(--fw-semibold);
+    list-style: none;
+  }
+  .packing-category__summary::-webkit-details-marker { display: none; }
+
+  .packing-category__summary h3 {
+    font-family: var(--font-heading);
+    font-size: var(--fs-lg);
+    margin: 0;
+  }
+
+  .packing-category__toggle::after {
+    content: '▾';
+    display: inline-block;
+    transition: transform var(--dur-fast) var(--ease-out);
+    color: var(--color-text-muted);
+  }
+
+  details[open] .packing-category__toggle::after {
+    transform: rotate(180deg);
+  }
+
+  .packing-category__items {
+    list-style: none;
+    padding: 0 var(--space-4) var(--space-4);
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .packing-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: var(--fs-sm);
+  }
+
+  .packing-item__label {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    cursor: default;
+  }
+
+  .packing-item__label input[type="checkbox"] {
+    margin-top: 3px;
+    accent-color: var(--color-accent);
+  }
+
+  .packing-item__note {
+    font-size: var(--fs-xs);
+    color: var(--color-text-faint);
+    padding-left: calc(20px + var(--space-2));
+  }
+</style>

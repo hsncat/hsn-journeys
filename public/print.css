@@ -1,0 +1,129 @@
+/* ============================================================
+ * Print styles — clean, readable output
+ * ============================================================ */
+
+@media print {
+  *, *::before, *::after {
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .navbar,
+  .tabbar,
+  .footer,
+  .skip-link,
+  .theme-toggle,
+  .nav-menu-toggle,
+  .back-link,
+  .photo-zoom-icon,
+  .lightbox-overlay {
+    display: none !important;
+  }
+
+  body {
+    font-size: 12pt;
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+  }
+
+  h1 { font-size: 24pt; }
+  h2 { font-size: 18pt; }
+  h3 { font-size: 14pt; }
+  h4 { font-size: 12pt; }
+
+  a {
+    text-decoration: underline;
+    color: #000 !important;
+  }
+
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    font-weight: normal;
+  }
+
+  .container {
+    max-width: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .detail-page {
+    max-width: none;
+  }
+
+  .detail-header {
+    border: 1px solid #ccc;
+    break-inside: avoid;
+  }
+
+  .detail-story {
+    border: none;
+    padding: 0;
+    white-space: pre-wrap;
+  }
+
+  .itinerary-table {
+    display: table !important;
+  }
+
+  .itinerary-cards {
+    display: none !important;
+  }
+
+  .subcard {
+    border: 1px solid #ccc;
+    break-inside: avoid;
+  }
+
+  .journey-card,
+  .city-card,
+  .wishlist-card {
+    border: 1px solid #ccc;
+    break-inside: avoid;
+  }
+
+  .chip {
+    border: 1px solid #999;
+    background: none !important;
+  }
+
+  table {
+    border-collapse: collapse;
+  }
+
+  th, td {
+    border: 1px solid #999;
+    padding: 4px 6px;
+  }
+
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  /* Stats grid print layout */
+  .stats-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+
+  .stat-card {
+    border: 1px solid #ccc;
+  }
+
+  @page {
+    margin: 2cm;
+  }
+
+  /* Avoid breaking these elements mid-way */
+  h1, h2, h3, h4, h5, h6,
+  .detail-header,
+  .subcard,
+  .wishlist-card {
+    break-after: avoid;
+  }
+}

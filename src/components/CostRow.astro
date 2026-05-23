@@ -1,0 +1,60 @@
+---
+import type { Cost } from '@lib/types';
+import { COST_LABELS, COST_ICONS } from '@lib/constants';
+import { fmtNumber } from '@lib/journey-helpers';
+import Icons from './Icons.astro';
+
+export interface Props {
+  costs: Cost;
+  showLabel?: boolean;
+}
+
+const { costs, showLabel = true } = Astro.props;
+const keys = Object.keys(COST_LABELS) as (keyof Cost)[];
+const entries = keys.filter(k => (costs[k] || 0) > 0);
+---
+
+{entries.length > 0 && (
+  <dl class="cost-row">
+    {entries.map((key) => (
+      <div class="cost-item">
+        <dt class="cost-label">
+          <Icons name={COST_ICONS[key] || 'dollarSign'} size={16} />
+          {showLabel && <span>{COST_LABELS[key]}</span>}
+        </dt>
+        <dd class="cost-value">{fmtNumber(costs[key])}</dd>
+      </div>
+    ))}
+  </dl>
+)}
+
+<style>
+  .cost-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin: 0;
+  }
+
+  .cost-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  .cost-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+  }
+
+  .cost-value {
+    font-family: var(--font-numeric);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text);
+    margin: 0;
+  }
+</style>

@@ -4,103 +4,91 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-HSN Journey Traces is a static, multi-page travel journal website. It is built with plain HTML, CSS, and vanilla JavaScript. There is no build system, no package manager, and no test suite.
+HSN Journey Traces is a full-stack travel journal app deployed on Cloudflare Pages. Display pages use Astro SSG (zero JS for visitors). The admin dashboard is a React SPA at `/admin/*`. All data lives in Cloudflare D1 (SQLite), photos in R2 (object storage).
+
+## Architecture
+
+```
+Cloudflare Pages (unified deployment)
+├── /                    ← Astro SSG static pages (index, cities, map, wishlist)
+├── /cities/[id]         ← Astro SSR (calls D1 at request time)
+├── /admin/*             ← React SPA (client-only, prerender=false)
+├── /api/*               ← Pages Functions with Hono (functions/api/)
+├── D1                   ← SQLite database (hsn-journeys-db)
+└── R2                   ← Photo storage (hsn-journeys-photos)
+```
 
 ## Local Development
 
-Serve the repository root with any static file server. For example:
-
 ```bash
-python3 -m http.server 8080
-# or
-npx serve .
+npm run dev          # astro dev (runs on localhost:4321)
+npm run build        # astro build (outputs to dist/)
+npm run preview      # wrangler pages dev ./dist (local Cloudflare simulation)
+npm run db:migrate   # Apply D1 migrations to remote DB
+npm run db:seed      # Seed remote D1 from legacy data
 ```
 
-Then open `http://localhost:8080` in a browser.
+The project requires Cloudflare credentials. Ensure `wrangler.toml` is configured.
 
-## Page Structure
+## Project File Structure
 
-| Page | File | Purpose |
-|------|------|---------|
-| Home | `index.html` | Stats summary, recent journeys grid, packing list table |
-| Cities | `cities.html` | Expandable primary/secondary card list of all journeys |
-| Map | `map.html` | Leaflet.js map with markers for visited locations |
-| Wishlist | `wishlist.html` | Grid of planned future trips |
-| Detail | `detail.html?id=<id>` | Single journey view with story, itinerary, costs, photos |
-| Add | `add.html` | Form to add a new journey |
-
-All pages share `styles.css` and include `data.js` before their page-specific script.
-
-## Data Architecture
-
-`data.js` is the central data layer.
-
-- **`defaultJourneys`** — Hard-coded source of truth for the initial journey dataset.
-- **`wishlist`** — Hard-coded array of planned trips.
-- **`journeys`** — Runtime mutable array. Initialized from `localStorage` key `hsn-journeys`, or falls back to a deep copy of `defaultJourneys`.
-- **Force reset** — On first load (or after a version bump), `resetJourneys()` is triggered by the flag `hsn-journeys-reset-v20260504` in `localStorage`. This overwrites any persisted data with `defaultJourneys`.
-
-Key utility functions in `data.js`:
-- `getCityList()` — Deduplicates journeys by `city`, counts occurrences.
-- `getJourneyById(id)` — Lookup by numeric `id`.
-- `generateLocations(journey)` — Splits multi-location journeys into individual location objects. Uses `·` to split `country` (international), `&` to split `province` or `city` (domestic).
-- `getLocationList()` — Returns all locations across all journeys, sorted by visit count.
-- `addJourney()`, `updateJourney()`, `deleteJourney()`, `saveJourneys()` — Mutate `journeys` and persist to `localStorage`.
-
-## Journey Data Model
-
-```js
-{
-  id: number,
-  province: string,        // e.g. "福建" or "欧洲"
-  city: string,            // e.g. "厦门" or "法瑞意"
-  country: string,         // e.g. "中国" or "法国·瑞士·意大利"
-  date: string,            // "YYYY-MM-DD"
-  endDate: string,         // "YYYY-MM-DD"
-  title: string,
-  emoji: string,
-  description: string,
-  highlights: string[],    // e.g. ["鼓浪屿", "厦门大学"]
-  story: string,           // Long-form narrative
-  cost: {
-    package: number,       // 报团费
-    transport: number,     // 交通费
-    accommodation: number, // 住宿费
-    food: number           // 餐饮费
-  },
-  itinerary: [
-    { date, morning, afternoon, evening, note }
-  ],
-  photo: string,           // Base64 data URL or image path
-  subCards: [              // Optional sub-location entries
-    { name, date, endDate, province, city, emoji, highlights, cost }
-  ]
-}
+```
+├── astro.config.mjs          # Astro 5 config (static output, cloudflare adapter)
+├── wrangler.toml             # D1 + R2 bindings, env vars
+├── functions/                # Pages Functions (API backend)
+│   ├── _middleware.ts        # JWT auth middleware
+│   └── api/                  # Route handlers (auth, journeys, wishlist, packing, photos, coordinates, stats, trigger-deploy)
+├── src/
+│   ├── pages/                # Astro routes (SSG + SSR)
+│   │   ├── index.astro       # Homepage (SSG)
+│   │   ├── cities.astro      # Cities list (SSG)
+│   │   ├── cities/[id].astro # Journey detail (SSR — prerender=false)
+│   │   ├── map.astro         # Leaflet map (SSG)
+│   │   ├── wishlist.astro    # Wishlist grid (SSG)
+│   │   └── admin/[...slug].astro  # Admin SPA entry (SSR — prerender=false)
+│   ├── layouts/              # Astro layouts (BaseLayout, PageLayout, AdminLayout)
+│   ├── components/           # Astro components (13 files: Navbar, Footer, TabBar, Icons, JourneyCard, StatCard, HighlightChips, EmptyState, SkeletonCard, CostRow, ItineraryTable, PhotoLightbox, PackingList)
+│   ├── admin/                # React SPA (only served at /admin/*)
+│   │   ├── App.tsx           # Root: QueryClient + BrowserRouter + AuthProvider
+│   │   ├── main.tsx          # Mount function
+│   │   ├── router.tsx        # Admin routes with AuthGuard
+│   │   ├── api.ts            # Fetch wrapper with JWT auth
+│   │   ├── types.ts          # Admin-specific types
+│   │   ├── hooks/            # useAuth, useJourneys, useWishlist, usePacking, usePhotoUpload
+│   │   ├── components/       # Sidebar, AuthGuard, PhotoUploader, HighlightInput, ItineraryGridEditor, SortableList, ConfirmDialog, DeployButton
+│   │   └── pages/            # Login, Register, Dashboard, JourneyList, JourneyEdit, Wishlist, PackingList, Coordinates, Settings
+│   ├── lib/
+│   │   ├── d1-client.ts      # D1 query functions (build-time data fetching)
+│   │   ├── journey-helpers.ts # Pure functions: getLocationList, sumCosts, getDays, etc.
+│   │   ├── types.ts          # Shared TypeScript types
+│   │   ├── constants.ts      # Cost labels, R2 URL, site name
+│   │   └── ssg-data.ts       # Legacy data loader (reads data/journeys.json)
+│   └── styles/
+│       ├── tokens.css         # Design system CSS custom properties + dark mode
+│       └── global.css         # Reset, typography, utilities
+├── migrations/               # D1 SQL migration files
+├── scripts/                  # seed-from-json.ts, migrate-photos-to-r2.ts
+├── legacy/                   # Original static HTML/CSS/JS project (archived)
+└── public/                   # Static assets (favicon, robots.txt)
 ```
 
-## Key JavaScript Files
+## Data Flow
 
-- **`cities.js`** — Renders expandable primary cards. Each primary card can expand to show secondary cards (auto-generated from `generateLocations`, or from `subCards` if defined). Supports inline editing of the primary card and adding/editing/deleting sub-cards. `syncPrimaryFromSubCards()` aggregates sub-card dates, costs, and highlights back to the parent journey.
-- **`detail.js`** — Renders a full journey page. Includes an inline edit form with an itinerary table editor (`renderItineraryEditor`) and photo upload via `FileReader` to Base64.
-- **`map.js`** — Contains `cityCoordinates`, a hard-coded array of `{ name, lat, lng, type }`. `getMapLocations()` maps journeys to these coordinates via `generateLocations`. International markers use red (`#e53e3e`), domestic use blue (`#2563EB`).
-- **`script.js`** — Homepage: computes stats and renders the 3 most recent journeys.
-- **`wishlist.js`** — Renders the static `wishlist` array from `data.js`.
+- **Display pages** (Astro SSG): Build time → D1 query via platform proxy → generate static HTML → CDN serves
+- **Detail page** (Astro SSR): Request → D1 query → render HTML → CDN caches
+- **Admin SPA**: Client fetches `/api/*` → Pages Functions → D1/R2 read/write → save → optionally trigger Pages redeploy
+- **API auth**: JWT (HS256, 7-day expiry) stored in localStorage. Middleware validates on write endpoints
+
+## Database (D1)
+
+15 tables: users, journeys, highlights, costs, itinerary_items, sub_cards (TEXT id), sub_card_highlights, sub_card_costs, sub_card_itinerary, wishlist_items, wishlist_highlights, packing_categories, packing_items, city_coordinates, settings.
+
+Remote DB ID: `56c2b4ec-59cc-4ded-8bd1-b21c4d6d4d60`
 
 ## Design System
 
-Reference `design-system/hsn-journey-traces/MASTER.md` for the full spec.
-
 - **Heading font:** Caveat (Google Fonts)
 - **Body font:** Quicksand (Google Fonts)
-- **Primary color:** `#18181B`
-- **Accent/CTA:** `#2563EB`
-- **Background:** `#FAFAFA`
-
-Note: The design system forbids emojis as icons in favor of SVGs, but the current codebase uses emojis extensively for journey visuals. When adding new UI elements, prefer SVG icons; when editing journey data, emojis are the established convention.
-
-## Important Implementation Details
-
-- **Multi-location splitting** — `generateLocations()` is the single source of truth for how a journey is broken into map pins and secondary cards. Adding a new multi-stop trip requires using `&` (for province/city) or `·` (for country) in the appropriate field.
-- **Map coordinates** — Any new location displayed on the map must also be added to the `cityCoordinates` array in `map.js` with `lat`/`lng`.
-- **Photo storage** — Photos are stored as Base64 data URLs in `localStorage`. There is no backend or external image hosting.
-- **No framework** — All DOM manipulation is vanilla JS. There are no reactive data bindings; after mutating `journeys`, call `saveJourneys()` and manually update the DOM or reload the page.
+- **Primary color:** `#18181B`, Accent: `#2563EB`, Background: `#FAFAFA`
+- **Dark mode:** `[data-theme="dark"]` on `<html>`, toggled via localStorage
+- **CSS tokens** in `src/styles/tokens.css` — colors, spacing, fonts, shadows, radii, z-indices, animations

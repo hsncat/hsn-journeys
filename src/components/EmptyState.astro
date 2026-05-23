@@ -1,0 +1,89 @@
+---
+import Icons from './Icons.astro';
+
+export interface Props {
+  icon: string;
+  title: string;
+  description: string;
+  actionText?: string;
+  actionHref?: string;
+}
+
+const { icon, title, description, actionText, actionHref } = Astro.props;
+---
+
+<div class="empty-state" role="status">
+  <div class="empty-state__icon">
+    <Icons name={icon} size={48} />
+  </div>
+  <h3 class="empty-state__title">{title}</h3>
+  <p class="empty-state__description">{description}</p>
+  {actionText && actionHref && (
+    <div class="empty-state__action">
+      <a class="btn btn-primary" href={actionHref}>{actionText}</a>
+    </div>
+  )}
+</div>
+
+<style>
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--space-16) var(--space-4);
+    gap: var(--space-3);
+  }
+
+  .empty-state__icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--color-primary-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-2);
+  }
+
+  .empty-state__title {
+    font-family: var(--font-heading);
+    font-size: var(--fs-xl);
+    color: var(--color-primary);
+    margin: 0;
+  }
+
+  .empty-state__description {
+    color: var(--color-text-muted);
+    font-size: var(--fs-sm);
+    max-width: 320px;
+    margin: 0;
+  }
+
+  .empty-state__action {
+    margin-top: var(--space-2);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-6);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--color-accent);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background: var(--color-accent-hover);
+    color: #fff;
+  }
+</style>

@@ -1,0 +1,16 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+
+export const prerender = false;
+---
+
+<AdminLayout>
+  <div id="admin-root"></div>
+</AdminLayout>
+
+<script>
+  import('../../admin/main').then((m) => {
+    const el = document.getElementById('admin-root');
+    if (el) m.mount(el);
+  });
+</script>
