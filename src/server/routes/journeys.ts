@@ -3,15 +3,12 @@ import type { AppBindings } from '../middleware';
 import { requireAdmin } from '../middleware';
 import {
   type CostObject,
-  type ItineraryTable,
   type SubCardDTO,
   type JourneyRow,
-  type SubCardRow,
   emptyCost,
   emptyItinerary,
   listJourneys,
   getJourney,
-  journeyRowToDTO,
 } from '../db';
 import { aggregateFromSubCards, normalizeItineraryTable } from '@/lib/itinerary';
 
@@ -46,6 +43,7 @@ interface CreateJourneyBody {
   highlights?: string[];
   cost?: Partial<CostObject>;
   photoUrl?: string | null;
+  subCards?: Partial<SubCardDTO>[];
 }
 
 journeys.post('/', requireAdmin, async (c) => {
@@ -72,22 +70,73 @@ journeys.post('/', requireAdmin, async (c) => {
 
   if (!result) return c.json({ error: 'insert_failed' }, 500);
 
-  // 自动创建一个 default sub_card
-  const subId = `sub-${result.id}-default`;
-  await c.env.DB.prepare(
-    `INSERT INTO sub_cards (id, journey_id, name, province, city, country, date, end_date, emoji, story, highlights_json, itinerary_table_json, cost_json, photo_url, sort_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`
-  ).bind(
-    subId, result.id, city, province, city, country, date, endDate,
-    body.emoji ?? null,
-    body.story ?? null,
-    JSON.stringify(body.highlights ?? []),
-    JSON.stringify(emptyItinerary()),
-    JSON.stringify(cost),
-    body.photoUrl ?? null,
-  ).run();
+  const initialSubCards = body.subCards?.length ? body.subCards : [{
+    name: city,
+    province,
+    city,
+    country,
+    date,
+    endDate,
+    emoji: body.emoji ?? null,
+    story: body.story ?? null,
+    highlights: body.highlights ?? [],
+    itineraryTable: emptyItinerary(),
+    cost,
+    photoUrl: body.photoUrl ?? null,
+  }];
 
-  const created = await getJourney(c.env.DB, result.id);
+  for (const [index, sub] of initialSubCards.entries()) {
+    const subCost = { ...emptyCost(), ...(sub.cost ?? {}) };
+    const itin = normalizeItineraryTable(sub.itineraryTable ?? emptyItinerary());
+    const subId = initialSubCards.length === 1
+      ? `sub-${result.id}-default`
+      : `sub-${result.id}-${index + 1}`;
+    await c.env.DB.prepare(
+      `INSERT INTO sub_cards (id, journey_id, name, province, city, country, date, end_date, emoji, story, highlights_json, itinerary_table_json, cost_json, photo_url, sort_order)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      subId,
+      result.id,
+      sub.name || sub.city || city,
+      sub.province ?? province,
+      sub.city ?? city,
+      sub.country ?? country,
+      sub.date ?? date,
+      sub.endDate ?? endDate,
+      sub.emoji ?? body.emoji ?? null,
+      sub.story ?? body.story ?? null,
+      JSON.stringify(sub.highlights ?? body.highlights ?? []),
+      JSON.stringify(itin),
+      JSON.stringify(subCost),
+      sub.photoUrl ?? body.photoUrl ?? null,
+      sub.sortOrder ?? index,
+    ).run();
+  }
+
+  let created = await getJourney(c.env.DB, result.id);
+  if (created) {
+    const agg = aggregateFromSubCards(created.subCards, created);
+    await c.env.DB.prepare(
+      `UPDATE journeys SET
+        province = ?, city = ?, country = ?, date = ?, end_date = ?, title = ?,
+        emoji = ?, highlights_json = ?, cost_json = ?, photo_url = ?,
+        updated_at = datetime('now')
+       WHERE id = ?`
+    ).bind(
+      agg.province ?? created.province,
+      agg.city ?? created.city,
+      agg.country ?? created.country,
+      agg.date ?? created.date,
+      agg.endDate ?? created.endDate,
+      agg.title ?? created.title,
+      agg.emoji ?? created.emoji,
+      JSON.stringify(agg.highlights ?? created.highlights),
+      JSON.stringify(agg.cost ?? created.cost),
+      agg.photoUrl ?? created.photoUrl,
+      result.id,
+    ).run();
+    created = await getJourney(c.env.DB, result.id);
+  }
   return c.json({ journey: created }, 201);
 });
 
@@ -158,7 +207,7 @@ journeys.post('/:id/resync', requireAdmin, async (c) => {
   const agg = aggregateFromSubCards(j.subCards, j);
   await c.env.DB.prepare(
     `UPDATE journeys SET
-      province = ?, city = ?, country = ?, date = ?, end_date = ?,
+      province = ?, city = ?, country = ?, date = ?, end_date = ?, title = ?,
       emoji = ?, highlights_json = ?, cost_json = ?, photo_url = ?,
       story = COALESCE(?, story),
       updated_at = datetime('now')
@@ -169,6 +218,7 @@ journeys.post('/:id/resync', requireAdmin, async (c) => {
     agg.country ?? j.country,
     agg.date ?? j.date,
     agg.endDate ?? j.endDate,
+    agg.title ?? j.title,
     agg.emoji ?? j.emoji,
     JSON.stringify(agg.highlights ?? j.highlights),
     JSON.stringify(agg.cost ?? j.cost),

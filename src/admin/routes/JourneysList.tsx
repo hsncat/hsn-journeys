@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { deleteJourneyApi, listJourneysApi } from '../api';
 import type { JourneyDTO } from '@/server/db';
 import { toast } from '../components/Toast';
-import { totalCost } from '@/lib/itinerary';
+import { formatMoney, totalCost } from '@/lib/itinerary';
 
 export default function JourneysList() {
   const [list, setList] = useState<JourneyDTO[]>([]);
@@ -74,7 +74,6 @@ export default function JourneysList() {
               <tr>
                 <th style={{ width: 60 }}></th>
                 <th>标题</th>
-                <th>地点</th>
                 <th>日期</th>
                 <th>子卡</th>
                 <th>费用</th>
@@ -91,15 +90,12 @@ export default function JourneysList() {
                     </Link>
                     <div style={{ fontSize: 11, color: 'var(--color-text-subtle)', marginTop: 2 }}>#{j.id}</div>
                   </td>
-                  <td style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
-                    {j.country} / {j.city}
-                  </td>
                   <td style={{ fontSize: 13, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
                     {j.date} ~ {j.endDate}
                   </td>
                   <td style={{ fontSize: 13, textAlign: 'center' }}>{j.subCards.length}</td>
                   <td style={{ fontSize: 13, fontFeatureSettings: '"tnum"' }}>
-                    ¥{totalCost(j.cost).toLocaleString()}
+                    ¥{formatMoney(totalCost(j.cost))}
                   </td>
                   <td>
                     <div className="row-actions">

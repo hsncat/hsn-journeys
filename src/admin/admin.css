@@ -205,6 +205,51 @@
   font-size: 11px;
   color: var(--color-text-subtle);
 }
+.field input[readonly],
+.field textarea[readonly] {
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+}
+.auto-title {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-weight: 600;
+  min-height: 42px;
+}
+.cost-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.cost-grid input {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.cost-total {
+  margin-top: 8px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+.cost-total strong {
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+}
+.subcard-template {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--color-bg);
+}
+@media (max-width: 980px) {
+  .cost-grid { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
+}
+@media (max-width: 560px) {
+  .cost-grid { grid-template-columns: 1fr; }
+}
 
 /* ----- Buttons ----- */
 .btn {
@@ -362,9 +407,14 @@
 
 /* ----- Itinerary Editor ----- */
 .itinerary-editor {
+  position: relative;
+}
+.itinerary-table-wrap {
+  position: relative;
+  margin: 34px 48px 8px 0;
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  overflow: hidden;
+  background: var(--color-surface);
 }
 .itinerary-editor table {
   width: 100%;
@@ -382,6 +432,7 @@
   font-weight: 600;
   color: var(--color-text-muted);
   position: relative;
+  text-align: center;
 }
 .itinerary-editor th input {
   width: 100%;
@@ -391,6 +442,7 @@
   font-weight: 600;
   background: transparent;
   color: var(--color-text);
+  text-align: center;
 }
 .itinerary-editor td input,
 .itinerary-editor td textarea {
@@ -407,12 +459,46 @@
   background: var(--color-accent-soft);
   outline: 0;
 }
+.itinerary-floating-control {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+}
+.itinerary-floating-control.is-row {
+  transform: translate(8px, -50%);
+}
+.itinerary-floating-control.is-col {
+  transform: translate(-50%, -38px);
+}
+.itinerary-floating-control button {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1;
+}
+.itinerary-floating-control button:hover { background: var(--color-surface-alt); }
+.itinerary-floating-control button.danger { color: var(--color-danger); }
+.itinerary-floating-control button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
 .itinerary-toolbar {
   display: flex;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 8px 0 0;
   background: var(--color-bg);
-  border-top: 1px solid var(--color-border);
 }
 .itinerary-toolbar button {
   border: 0;

@@ -54,7 +54,7 @@ async function resyncJourney(db: D1Database, journeyId: number) {
   const agg = aggregateFromSubCards(j.subCards, j);
   await db.prepare(
     `UPDATE journeys SET
-      province = ?, city = ?, country = ?, date = ?, end_date = ?,
+      province = ?, city = ?, country = ?, date = ?, end_date = ?, title = ?,
       emoji = ?, highlights_json = ?, cost_json = ?, photo_url = ?,
       updated_at = datetime('now')
      WHERE id = ?`
@@ -64,6 +64,7 @@ async function resyncJourney(db: D1Database, journeyId: number) {
     agg.country ?? j.country,
     agg.date ?? j.date,
     agg.endDate ?? j.endDate,
+    agg.title ?? j.title,
     agg.emoji ?? j.emoji,
     JSON.stringify(agg.highlights ?? j.highlights),
     JSON.stringify(agg.cost ?? j.cost),

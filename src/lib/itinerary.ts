@@ -49,6 +49,29 @@ export function totalCost(c: CostObject | null | undefined): number {
     + (c.food || 0) + (c.shopping || 0) + (c.ticket || 0);
 }
 
+export function formatMoney(value: number | null | undefined): string {
+  return (Number(value) || 0).toLocaleString('zh-CN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+export function parseMoney(value: string): number {
+  const normalized = value.replace(/[,\s￥¥]/g, '');
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : 0;
+}
+
+export function dateRangeFromItinerary(t: ItineraryTable): { date: string; endDate: string } | null {
+  const dateIdx = t.headers.indexOf('日期') >= 0 ? t.headers.indexOf('日期') : 0;
+  const dates = t.rows
+    .map(row => normalizeDate(String(row[dateIdx] ?? '').trim()))
+    .filter((v): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v))
+    .sort();
+  if (dates.length === 0) return null;
+  return { date: dates[0], endDate: dates[dates.length - 1] };
+}
+
 export function extractHighlightsFromItinerary(t: ItineraryTable): string[] {
   const result: string[] = [];
   const morningIdx = t.headers.indexOf('上午');
@@ -67,6 +90,25 @@ export function extractHighlightsFromItinerary(t: ItineraryTable): string[] {
   return unique(result);
 }
 
+export function buildJourneyTitle(province: string | null | undefined, city: string | null | undefined): string {
+  const p = (province ?? '').trim();
+  const c = (city ?? '').trim();
+  if (p && c) return `${p}·${c}`;
+  return p || c;
+}
+
+function normalizeDate(s: string): string | null {
+  const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!m) return null;
+  return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+}
+
+function countryTypeFromSubCards(subCards: SubCardDTO[], fallback: string | undefined): string {
+  const countries = subCards.map(s => (s.country ?? '').trim()).filter(Boolean);
+  if (countries.length === 0) return fallback || '国内';
+  return countries.some(c => c !== '中国' && c !== '国内') ? '国外' : '国内';
+}
+
 /**
  * 从 sub_cards 数组聚合 journey 字段。
  * - 单 sub_card：所有字段同步到 journey
@@ -81,37 +123,42 @@ export function aggregateFromSubCards(subCards: SubCardDTO[], existing: Partial<
     const v = s.endDate || s.date;
     return v && v > max ? v : max;
   }, sorted[0].endDate || sorted[0].date);
+  const cities = unique(sorted.map(s => s.city).filter((v): v is string => !!v));
+  const provinces = unique(sorted.map(s => s.province).filter((v): v is string => !!v));
+  const province = provinces.length > 1 ? provinces.join('&') : (provinces[0] || existing.province || '');
+  const city = cities.length > 1 ? cities.join('&') : (cities[0] || existing.city || '');
+  const title = buildJourneyTitle(province, city);
+  const highlightsBySubCard = sorted
+    .map(s => (s.highlights || []).map(h => h.trim()).filter(Boolean).join('、'))
+    .filter(Boolean);
 
   if (subCards.length === 1) {
     const s = subCards[0];
     return {
       ...existing,
-      province: s.province ?? existing.province ?? '',
-      city: s.city ?? existing.city ?? '',
-      country: s.country ?? existing.country ?? '',
+      province,
+      city,
+      country: existing.country || countryTypeFromSubCards(subCards, existing.country),
       date: s.date ?? existing.date ?? '',
       endDate: s.endDate ?? existing.endDate ?? '',
+      title: title || existing.title || '',
       emoji: s.emoji ?? existing.emoji ?? null,
-      highlights: s.highlights.length ? s.highlights : existing.highlights ?? [],
+      highlights: highlightsBySubCard.length ? highlightsBySubCard : existing.highlights ?? [],
       story: s.story ?? existing.story ?? null,
       cost: s.cost,
       photoUrl: s.photoUrl ?? existing.photoUrl ?? null,
     };
   }
 
-  const cities = unique(subCards.map(s => s.city).filter((v): v is string => !!v));
-  const provinces = unique(subCards.map(s => s.province).filter((v): v is string => !!v));
-  const countries = unique(subCards.map(s => s.country).filter((v): v is string => !!v));
-  const allHighlights = unique(subCards.flatMap(s => s.highlights || [])).slice(0, 12);
-
   return {
     ...existing,
-    province: provinces.length > 1 ? provinces.join('&') : (provinces[0] || existing.province || ''),
-    city: cities.length > 1 ? cities.join('&') : (cities[0] || existing.city || ''),
-    country: countries.length > 1 ? countries.join('·') : (countries[0] || existing.country || ''),
+    province,
+    city,
+    country: existing.country || countryTypeFromSubCards(subCards, existing.country),
     date: firstDate,
     endDate: lastEnd,
-    highlights: allHighlights.length ? allHighlights : (existing.highlights ?? []),
+    title: title || existing.title || '',
+    highlights: highlightsBySubCard.length ? highlightsBySubCard : (existing.highlights ?? []),
     cost: sumCost(...subCards.map(s => s.cost)),
     photoUrl: subCards.find(s => s.photoUrl)?.photoUrl ?? existing.photoUrl ?? null,
   };

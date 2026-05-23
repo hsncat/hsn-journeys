@@ -1,21 +1,47 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   createJourneyApi, deleteSubCardApi, getJourneyApi, resyncJourneyApi, updateJourneyApi,
 } from '../api';
-import type { JourneyDTO } from '@/server/db';
-import { emptyCost } from '@/server/db';
+import type { JourneyDTO, SubCardDTO } from '@/server/db';
+import { emptyCost, emptyItinerary } from '@/server/db';
 import { toast } from '../components/Toast';
 import PhotoUploader from '../components/PhotoUploader';
-import { totalCost } from '@/lib/itinerary';
+import ItineraryEditor from '../components/ItineraryEditor';
+import CostFields from '../components/CostFields';
+import {
+  aggregateFromSubCards,
+  buildJourneyTitle,
+  dateRangeFromItinerary,
+  formatMoney,
+  totalCost,
+} from '@/lib/itinerary';
 
 interface Props { mode: 'new' | 'edit' }
+
+const blankSub = (): SubCardDTO => ({
+  id: 'new-sub-template',
+  journeyId: 0,
+  name: '',
+  province: '',
+  city: '',
+  country: '中国',
+  date: '',
+  endDate: '',
+  emoji: '📍',
+  story: null,
+  highlights: [],
+  itineraryTable: emptyItinerary(),
+  cost: emptyCost(),
+  photoUrl: null,
+  sortOrder: 0,
+});
 
 const blankJourney = (): JourneyDTO => ({
   id: 0,
   province: '',
   city: '',
-  country: '中国',
+  country: '国内',
   date: '',
   endDate: '',
   title: '',
@@ -26,7 +52,7 @@ const blankJourney = (): JourneyDTO => ({
   cost: emptyCost(),
   photoUrl: null,
   sortOrder: 0,
-  subCards: [],
+  subCards: [blankSub()],
 });
 
 export default function JourneyEdit({ mode }: Props) {
@@ -51,33 +77,77 @@ export default function JourneyEdit({ mode }: Props) {
         }
       })();
     }
-  }, [id, mode]);
+  }, [id, mode, navigate]);
+
+  const autoJourney = useMemo(() => {
+    const base = { ...j, country: normalizeCountry(j.country) };
+    if (j.subCards.length === 0) {
+      const title = buildJourneyTitle(j.province, j.city);
+      return { ...base, title: title || j.title };
+    }
+    const aggregated = aggregateFromSubCards(j.subCards, base);
+    return {
+      ...base,
+      ...aggregated,
+      country: normalizeCountry(base.country),
+      title: aggregated.title || buildJourneyTitle(aggregated.province, aggregated.city),
+    } as JourneyDTO;
+  }, [j]);
 
   const update = <K extends keyof JourneyDTO>(key: K, value: JourneyDTO[K]) => {
     setJ(prev => ({ ...prev, [key]: value }));
   };
 
+  const updateNewSub = (index: number, patch: Partial<SubCardDTO>) => {
+    setJ(prev => {
+      const subCards = prev.subCards.map((sub, i) => i === index ? { ...sub, ...patch } : sub);
+      const aggregated = aggregateFromSubCards(subCards, { ...prev, country: normalizeCountry(prev.country) });
+      return {
+        ...prev,
+        ...aggregated,
+        country: normalizeCountry(prev.country),
+        title: aggregated.title || buildJourneyTitle(aggregated.province, aggregated.city),
+        subCards,
+      } as JourneyDTO;
+    });
+  };
+
+  const updateNewSubItinerary = (index: number, itineraryTable: SubCardDTO['itineraryTable']) => {
+    const range = dateRangeFromItinerary(itineraryTable);
+    updateNewSub(index, {
+      itineraryTable,
+      ...(range ? { date: range.date, endDate: range.endDate } : {}),
+    });
+  };
+
   const handleSave = async () => {
-    if (!j.title || !j.city || !j.province || !j.country || !j.date || !j.endDate) {
-      toast('请填写标题、省份、城市、国家、日期', 'error');
+    const payload = {
+      province: autoJourney.province,
+      city: autoJourney.city,
+      country: normalizeCountry(autoJourney.country),
+      date: autoJourney.date,
+      endDate: autoJourney.endDate,
+      title: autoJourney.title,
+      emoji: autoJourney.emoji,
+      description: null,
+      story: autoJourney.story,
+      highlights: autoJourney.highlights,
+      cost: autoJourney.cost,
+      photoUrl: autoJourney.photoUrl,
+      subCards: mode === 'new' ? autoJourney.subCards.map(sub => ({
+        ...sub,
+        name: sub.city || autoJourney.title || '子卡片',
+        country: sub.country || '中国',
+      })) : undefined,
+    };
+
+    if (!payload.province || !payload.city || !payload.country || !payload.date || !payload.endDate || !payload.title) {
+      toast('请先在子卡片里填写省份、城市和日期', 'error');
       return;
     }
+
     setSaving(true);
     try {
-      const payload = {
-        province: j.province,
-        city: j.city,
-        country: j.country,
-        date: j.date,
-        endDate: j.endDate,
-        title: j.title,
-        emoji: j.emoji,
-        description: j.description,
-        story: j.story,
-        highlights: j.highlights,
-        cost: j.cost,
-        photoUrl: j.photoUrl,
-      };
       if (mode === 'new') {
         const created = await createJourneyApi(payload);
         toast('已创建', 'success');
@@ -125,7 +195,7 @@ export default function JourneyEdit({ mode }: Props) {
       <div className="admin-page-header">
         <div>
           <p className="breadcrumb">
-            <Link to="/journeys">旅程</Link> / {mode === 'new' ? '新建' : `#${id} ${j.title}`}
+            <Link to="/journeys">旅程</Link> / {mode === 'new' ? '新建' : `#${id} ${autoJourney.title}`}
           </p>
           <h1>{mode === 'new' ? '新建旅程' : '编辑旅程'}</h1>
         </div>
@@ -141,88 +211,116 @@ export default function JourneyEdit({ mode }: Props) {
 
       <div className="admin-card">
         <h2>基本信息</h2>
-        <p className="desc">一级卡片代表整段旅程；具体的行程明细在下面的"子卡片"里。</p>
         <div className="form-grid">
           <div className="field">
             <label>Emoji</label>
-            <input type="text" value={j.emoji ?? ''} maxLength={4} onChange={e => update('emoji', e.target.value)} />
+            <input type="text" value={autoJourney.emoji ?? ''} maxLength={4} onChange={e => update('emoji', e.target.value)} />
           </div>
           <div className="field">
-            <label>标题 *</label>
-            <input type="text" value={j.title} onChange={e => update('title', e.target.value)} />
+            <label>标题</label>
+            <div className="auto-title">{autoJourney.title || '省份 / 大区·城市'}</div>
           </div>
           <div className="field">
-            <label>省份 / 大区 *</label>
-            <input type="text" value={j.province} onChange={e => update('province', e.target.value)} />
-            <span className="hint">多省用 & 分隔，如 "辽宁&山东"</span>
+            <label>省份 / 大区</label>
+            <input type="text" value={autoJourney.province} readOnly />
           </div>
           <div className="field">
-            <label>城市 *</label>
-            <input type="text" value={j.city} onChange={e => update('city', e.target.value)} />
-            <span className="hint">多城用 & 分隔，如 "长白山&延吉"</span>
+            <label>城市</label>
+            <input type="text" value={autoJourney.city} readOnly />
           </div>
           <div className="field">
-            <label>国家 *</label>
-            <input type="text" value={j.country} onChange={e => update('country', e.target.value)} />
-            <span className="hint">国内填 "中国"；多国用 · 分隔，如 "法国·瑞士·意大利"</span>
+            <label>国家</label>
+            <select value={normalizeCountry(j.country)} onChange={e => update('country', e.target.value)}>
+              <option value="国内">国内</option>
+              <option value="国外">国外</option>
+            </select>
           </div>
           <div className="field">
-            <label>开始日期 *</label>
-            <input type="date" value={j.date} onChange={e => update('date', e.target.value)} />
+            <label>开始日期</label>
+            <input type="date" value={autoJourney.date} readOnly />
           </div>
           <div className="field">
-            <label>结束日期 *</label>
-            <input type="date" value={j.endDate} onChange={e => update('endDate', e.target.value)} />
+            <label>结束日期</label>
+            <input type="date" value={autoJourney.endDate} readOnly />
           </div>
         </div>
         <div className="form-grid full">
           <div className="field">
-            <label>简介</label>
-            <textarea value={j.description ?? ''} onChange={e => update('description', e.target.value)} rows={2} />
-          </div>
-          <div className="field">
-            <label>景点亮点（用、或,分隔）</label>
-            <input
-              type="text"
-              value={j.highlights.join('、')}
-              onChange={e => update('highlights', e.target.value.split(/[、,，;；]/).map(s => s.trim()).filter(Boolean))}
-            />
+            <label>景点亮点</label>
+            <textarea value={autoJourney.highlights.join('\n')} readOnly rows={Math.max(3, autoJourney.highlights.length)} />
           </div>
           <div className="field">
             <label>旅行故事</label>
-            <textarea value={j.story ?? ''} onChange={e => update('story', e.target.value)} rows={6} />
+            <textarea value={autoJourney.story ?? ''} onChange={e => update('story', e.target.value || null)} rows={6} />
           </div>
         </div>
       </div>
 
       <div className="admin-card">
         <h2>费用</h2>
-        <p className="desc">这里是一级卡片的汇总费用。如果"子卡片"里填了费用，可以点"从子卡片聚合"自动汇总。</p>
-        <div className="form-grid">
-          {(['package', 'transport', 'accommodation', 'food', 'shopping', 'ticket'] as const).map(key => (
-            <div className="field" key={key}>
-              <label>{({
-                package: '报团费', transport: '交通费', accommodation: '住宿费',
-                food: '餐饮费', shopping: '购物费', ticket: '门票费',
-              } as Record<string, string>)[key]}</label>
-              <input
-                type="number"
-                min={0}
-                value={j.cost[key]}
-                onChange={e => update('cost', { ...j.cost, [key]: Number(e.target.value) || 0 })}
-              />
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop: 8, color: 'var(--color-text-muted)', fontSize: 14 }}>
-          合计 <strong style={{ color: 'var(--color-accent)' }}>¥{totalCost(j.cost).toLocaleString()}</strong>
-        </div>
+        <CostFields value={autoJourney.cost} readOnly />
       </div>
 
       <div className="admin-card">
         <h2>封面照片</h2>
-        <PhotoUploader value={j.photoUrl} onChange={key => update('photoUrl', key)} folder={`journeys/${id}`} />
+        <PhotoUploader value={autoJourney.photoUrl} onChange={key => update('photoUrl', key)} folder={`journeys/${id || 'new'}`} />
       </div>
+
+      {mode === 'new' && (
+        <div className="admin-card">
+          <h2>子卡片</h2>
+          {j.subCards.map((sub, index) => (
+            <div className="subcard-template" key={sub.id}>
+              <div className="form-grid">
+                <div className="field">
+                  <label>Emoji</label>
+                  <input type="text" value={sub.emoji ?? ''} maxLength={4} onChange={e => updateNewSub(index, { emoji: e.target.value })} />
+                </div>
+                <div className="field">
+                  <label>省份</label>
+                  <input type="text" value={sub.province ?? ''} onChange={e => updateNewSub(index, { province: e.target.value || null })} />
+                </div>
+                <div className="field">
+                  <label>城市</label>
+                  <input type="text" value={sub.city ?? ''} onChange={e => updateNewSub(index, { city: e.target.value || null })} />
+                </div>
+                <div className="field">
+                  <label>国家</label>
+                  <input type="text" value={sub.country ?? ''} onChange={e => updateNewSub(index, { country: e.target.value || null })} />
+                </div>
+                <div className="field">
+                  <label>开始日期</label>
+                  <input type="date" value={sub.date} onChange={e => updateNewSub(index, { date: e.target.value })} />
+                </div>
+                <div className="field">
+                  <label>结束日期</label>
+                  <input type="date" value={sub.endDate ?? ''} onChange={e => updateNewSub(index, { endDate: e.target.value || null })} />
+                </div>
+              </div>
+              <div className="form-grid full">
+                <div className="field">
+                  <label>景点亮点（用、或,分隔）</label>
+                  <input
+                    type="text"
+                    value={sub.highlights.join('、')}
+                    onChange={e => updateNewSub(index, {
+                      highlights: e.target.value.split(/[、,，;；]/).map(s => s.trim()).filter(Boolean),
+                    })}
+                  />
+                </div>
+                <div className="field">
+                  <label>故事</label>
+                  <textarea value={sub.story ?? ''} onChange={e => updateNewSub(index, { story: e.target.value || null })} rows={4} />
+                </div>
+              </div>
+              <h3>行程表</h3>
+              <ItineraryEditor value={sub.itineraryTable} onChange={v => updateNewSubItinerary(index, v)} />
+              <h3>费用</h3>
+              <CostFields value={sub.cost} onChange={cost => updateNewSub(index, { cost })} />
+            </div>
+          ))}
+        </div>
+      )}
 
       {mode === 'edit' && (
         <div className="admin-card">
@@ -233,7 +331,6 @@ export default function JourneyEdit({ mode }: Props) {
               <Link to={`/journeys/${id}/sub/new`} className="btn btn-accent">+ 添加子卡片</Link>
             </div>
           </div>
-          <p className="desc">每个子卡片对应一个具体目的地，包含独立的行程表、费用和亮点。</p>
           {j.subCards.length === 0 ? (
             <div className="admin-empty">暂无子卡片</div>
           ) : (
@@ -265,7 +362,7 @@ export default function JourneyEdit({ mode }: Props) {
                       {(s.highlights || []).slice(0, 3).join(' · ')}
                     </td>
                     <td style={{ fontSize: 13, fontFeatureSettings: '"tnum"' }}>
-                      ¥{totalCost(s.cost).toLocaleString()}
+                      ¥{formatMoney(totalCost(s.cost))}
                     </td>
                     <td>
                       <div className="row-actions">
@@ -283,3 +380,8 @@ export default function JourneyEdit({ mode }: Props) {
     </div>
   );
 }
+
+function normalizeCountry(country: string | null | undefined): string {
+  return country === '国外' ? '国外' : '国内';
+}
+

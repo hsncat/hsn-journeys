@@ -8,7 +8,8 @@ import { emptyCost, emptyItinerary } from '@/server/db';
 import { toast } from '../components/Toast';
 import ItineraryEditor from '../components/ItineraryEditor';
 import PhotoUploader from '../components/PhotoUploader';
-import { totalCost } from '@/lib/itinerary';
+import CostFields from '../components/CostFields';
+import { dateRangeFromItinerary } from '@/lib/itinerary';
 
 interface Props { mode: 'new' | 'edit' }
 
@@ -74,9 +75,31 @@ export default function SubCardEdit({ mode }: Props) {
     setS(prev => ({ ...prev, [key]: value }));
   };
 
+  const selectedParent = allJourneys.find(j => j.id === s.journeyId) ?? parent;
+  const autoName = (s.city || selectedParent?.title || selectedParent?.city || '子卡片').trim();
+
+  const updateJourneyId = (nextJourneyId: number) => {
+    const nextParent = allJourneys.find(j => j.id === nextJourneyId) ?? null;
+    if (nextParent) setParent(nextParent);
+    setS(prev => ({
+      ...prev,
+      journeyId: nextJourneyId,
+      name: nextParent?.title || prev.name,
+    }));
+  };
+
+  const updateItinerary = (itineraryTable: SubCardDTO['itineraryTable']) => {
+    const range = dateRangeFromItinerary(itineraryTable);
+    setS(prev => ({
+      ...prev,
+      itineraryTable,
+      ...(range ? { date: range.date, endDate: range.endDate } : {}),
+    }));
+  };
+
   const handleSave = async () => {
-    if (!s.name || !s.date) {
-      toast('请填写名称和开始日期', 'error');
+    if (!s.date) {
+      toast('请填写开始日期', 'error');
       return;
     }
     setSaving(true);
@@ -84,7 +107,7 @@ export default function SubCardEdit({ mode }: Props) {
       if (mode === 'new') {
         await createSubCardApi({
           journeyId: s.journeyId,
-          name: s.name,
+          name: autoName,
           province: s.province,
           city: s.city,
           country: s.country,
@@ -102,7 +125,7 @@ export default function SubCardEdit({ mode }: Props) {
       } else {
         await updateSubCardApi(s.id, {
           journeyId: s.journeyId,
-          name: s.name,
+          name: autoName,
           province: s.province,
           city: s.city,
           country: s.country,
@@ -152,20 +175,15 @@ export default function SubCardEdit({ mode }: Props) {
         <div className="form-grid">
           <div className="field">
             <label>归属一级卡片</label>
-            <select value={s.journeyId} onChange={e => update('journeyId', Number(e.target.value))}>
+            <select value={s.journeyId} onChange={e => updateJourneyId(Number(e.target.value))}>
               {allJourneys.map(jj => (
                 <option key={jj.id} value={jj.id}>#{jj.id} {jj.title}</option>
               ))}
             </select>
-            <span className="hint">可以把这个子卡片转移到其他旅程</span>
           </div>
           <div className="field">
             <label>Emoji</label>
             <input type="text" value={s.emoji ?? ''} maxLength={4} onChange={e => update('emoji', e.target.value)} />
-          </div>
-          <div className="field full">
-            <label>名称 *</label>
-            <input type="text" value={s.name} onChange={e => update('name', e.target.value)} />
           </div>
           <div className="field">
             <label>省份</label>
@@ -206,31 +224,12 @@ export default function SubCardEdit({ mode }: Props) {
 
       <div className="admin-card">
         <h2>行程表</h2>
-        <p className="desc">日期 / 上午 / 下午 / 备注。可以增减行列。</p>
-        <ItineraryEditor value={s.itineraryTable} onChange={v => update('itineraryTable', v)} />
+        <ItineraryEditor value={s.itineraryTable} onChange={updateItinerary} />
       </div>
 
       <div className="admin-card">
         <h2>费用</h2>
-        <div className="form-grid">
-          {(['package', 'transport', 'accommodation', 'food', 'shopping', 'ticket'] as const).map(key => (
-            <div className="field" key={key}>
-              <label>{({
-                package: '报团费', transport: '交通费', accommodation: '住宿费',
-                food: '餐饮费', shopping: '购物费', ticket: '门票费',
-              } as Record<string, string>)[key]}</label>
-              <input
-                type="number"
-                min={0}
-                value={s.cost[key]}
-                onChange={e => update('cost', { ...s.cost, [key]: Number(e.target.value) || 0 })}
-              />
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop: 8, color: 'var(--color-text-muted)', fontSize: 14 }}>
-          合计 <strong style={{ color: 'var(--color-accent)' }}>¥{totalCost(s.cost).toLocaleString()}</strong>
-        </div>
+        <CostFields value={s.cost} onChange={cost => update('cost', cost)} />
       </div>
 
       <div className="admin-card">
