@@ -1,8 +1,6 @@
 /**
  * Itinerary 与 SubCards 父子同步逻辑
- *
- * 从 legacy/cities.js 的 syncPrimaryFromSubcards 提炼。
- * 在前后台都使用，保持行为一致。
+ * 在前后台共享，保持行为一致。
  */
 
 import type { CostObject, ItineraryTable, SubCardDTO, JourneyDTO } from '@/server/db';

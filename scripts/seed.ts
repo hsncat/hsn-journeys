@@ -1,46 +1,23 @@
 /**
  * Seed Generator
  *
- * 解析 legacy/ 目录下的旧数据源 → 输出 migrations/0002_seed.sql
+ * 读取 data/seed.json（优先）或 data/seed.example.json，
+ * 生成 migrations/0002_seed.sql，可被 wrangler 应用到 D1。
  *
- * 数据源：
- *   - legacy/data/journeys.json：26 条 journey（含部分 subCards）
- *   - legacy/data.js：defaultWishlist 数组（19 条心愿）
- *   - legacy/map.js：cityCoordinates 数组（39 个城市）
- *   - legacy/index.html：行李清单表格（硬编码到本脚本）
+ * 用法：
+ *   pnpm seed:gen          # 生成
+ *   pnpm seed:local        # 本地应用
+ *   pnpm seed:remote       # 生产应用
  *
- * 输出：migrations/0002_seed.sql，可重复执行（每段先 DELETE）。
+ * 推荐工作流：复制一份 data/seed.example.json 为 data/seed.json，在 seed.json
+ * 里写自己的数据。seed.json 默认被 .gitignore，不会进版本控制。
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 
-// -------- SQL 工具 --------
-function sqlStr(v: unknown): string {
-  if (v == null || v === undefined) return 'NULL';
-  if (typeof v === 'number') return Number.isFinite(v) ? String(v) : 'NULL';
-  if (typeof v === 'boolean') return v ? '1' : '0';
-  const s = String(v).replace(/'/g, "''");
-  return `'${s}'`;
-}
-
-function sqlJson(v: unknown): string {
-  if (v == null) return 'NULL';
-  return sqlStr(JSON.stringify(v));
-}
-
-// -------- 提取 JS 文件中的字面量数组 --------
-function extractArrayLiteral(src: string, varName: string): unknown[] {
-  const re = new RegExp(`const\\s+${varName}\\s*=\\s*(\\[[\\s\\S]*?\\n\\])\\s*;`, 'm');
-  const match = src.match(re);
-  if (!match) throw new Error(`未找到变量 ${varName}`);
-  // 字面量是合法 JS，直接 eval 在本地脚本中是安全的
-  return new Function(`return ${match[1]}`)() as unknown[];
-}
-
-// -------- Journey & SubCard 类型 --------
 interface CostObject {
   package?: number;
   transport?: number;
@@ -86,7 +63,6 @@ interface RawJourney {
   cost?: CostObject;
   photo?: string;
   subCards?: RawSubCard[];
-  itinerary?: unknown;
 }
 
 interface RawWishlist {
@@ -107,58 +83,70 @@ interface RawCoord {
   type: 'domestic' | 'international';
 }
 
-// -------- 读数据源 --------
-const journeysJson = JSON.parse(
-  readFileSync(resolve(root, 'legacy/data/journeys.json'), 'utf8')
-) as RawJourney[];
+interface RawPacking {
+  item: string;
+  note?: string;
+  is_overseas_only?: number;
+}
 
-const dataJs = readFileSync(resolve(root, 'legacy/data.js'), 'utf8');
-const mapJs = readFileSync(resolve(root, 'legacy/map.js'), 'utf8');
+interface SeedData {
+  journeys?: RawJourney[];
+  wishlist?: RawWishlist[];
+  coords?: RawCoord[];
+  packing?: RawPacking[];
+  settings?: Record<string, string>;
+}
 
-const wishlist = extractArrayLiteral(dataJs, 'defaultWishlist') as RawWishlist[];
-const coords = extractArrayLiteral(mapJs, 'cityCoordinates') as RawCoord[];
-
-// 硬编码行李清单（legacy/index.html 第 55-143 行的 16 行）
-const packingItems = [
-  { item: '身份证、护照、签证、港澳通行证、入境卡（新加坡）', note: '护照确保6个月有效期', is_overseas_only: 0 },
-  { item: '机票', note: '美团、携程、飞猪', is_overseas_only: 0 },
-  { item: '酒店', note: 'booking、agoda、爱彼迎', is_overseas_only: 0 },
-  { item: '门票及行程预定', note: '', is_overseas_only: 0 },
-  { item: '目的地取现金', note: '', is_overseas_only: 0 },
-  { item: '电子支付', note: 'visa信用卡、万事达卡、银联储蓄卡、支付宝/微信', is_overseas_only: 0 },
-  { item: '交通路线查询、交通卡', note: '谷歌地图、高德地图、苹果钱包直接申请', is_overseas_only: 0 },
-  { item: '手机、流量卡、换卡卡针', note: '淘宝购买流量卡', is_overseas_only: 0 },
-  { item: '翻译软件', note: '谷歌翻译、拍照翻译', is_overseas_only: 1 },
-  { item: '充电宝、充电线、转换插头', note: '手机（充电线）、ipad（充电线）、充电宝（充电线）、耳机（充电线）', is_overseas_only: 0 },
-  { item: '相机、pocket3', note: '电池（不可托运）、充电线', is_overseas_only: 0 },
-  { item: '衣物', note: '内衣裤、袜子、外套、裙子、裤子、鞋、墨镜、帽子、手套（按需2天1套）、睡衣', is_overseas_only: 0 },
-  { item: '杂物', note: '耳塞、雨伞、卫生纸（2人10天5大包8小包）、卫生巾（按需）、湿纸巾、口罩、垃圾袋、驱蚊、洗衣液、晾衣架、一次性手套马桶套', is_overseas_only: 0 },
-  { item: '护肤化妆', note: '洗面奶、水乳面霜、牙刷牙膏、洗发水护发素沐浴露、洗头毛巾浴巾、面膜、刮胡刀、洗脸巾、洗手液、梳子、皮筋发夹、护手霜 · 防晒霜 · 长途飞行洗漱小包 · 化妆品全套', is_overseas_only: 0 },
-  { item: '电脑、鼠标、充电线', note: '非必带', is_overseas_only: 0 },
-  { item: '旅游保险', note: '支付宝', is_overseas_only: 0 },
+// -------- 选数据源 --------
+const candidates = [
+  resolve(root, 'data/seed.json'),
+  resolve(root, 'data/seed.example.json'),
 ];
+const src = candidates.find(p => existsSync(p));
+if (!src) {
+  console.error(`✗ 未找到种子数据。请确保以下任一文件存在：`);
+  candidates.forEach(p => console.error('  -', p));
+  process.exit(1);
+}
+console.log(`📄 使用数据源: ${src.replace(root + '/', '')}`);
 
-// -------- 生成 SQL --------
+const data = JSON.parse(readFileSync(src, 'utf8')) as SeedData;
+
+// -------- SQL 工具 --------
+function sqlStr(v: unknown): string {
+  if (v == null) return 'NULL';
+  if (typeof v === 'number') return Number.isFinite(v) ? String(v) : 'NULL';
+  if (typeof v === 'boolean') return v ? '1' : '0';
+  const s = String(v).replace(/'/g, "''");
+  return `'${s}'`;
+}
+
+function sqlJson(v: unknown): string {
+  if (v == null) return 'NULL';
+  return sqlStr(JSON.stringify(v));
+}
+
+// -------- 输出 --------
 const lines: string[] = [];
 lines.push('-- ============================================================================');
-lines.push('-- HSN Journeys Seed Data');
-lines.push('-- Generated by scripts/seed.ts');
+lines.push('-- Seed Data');
+lines.push('-- Generated by scripts/seed.ts from ' + src.replace(root + '/', ''));
 lines.push('-- ============================================================================');
 lines.push('');
-lines.push('-- 清空旧数据（重复执行安全）');
+lines.push('-- 清空旧数据，可重复执行');
 lines.push('DELETE FROM sub_cards;');
 lines.push('DELETE FROM journeys;');
-lines.push('DELETE FROM sqlite_sequence WHERE name IN ("journeys", "wishlist", "packing_items", "users");');
 lines.push('DELETE FROM wishlist;');
 lines.push('DELETE FROM city_coords;');
 lines.push('DELETE FROM packing_items;');
+lines.push('DELETE FROM sqlite_sequence WHERE name IN ("journeys", "wishlist", "packing_items");');
 lines.push('');
 
 // ---- Journeys + SubCards ----
-lines.push('-- Journeys + SubCards');
-for (const j of journeysJson) {
+const journeys = data.journeys ?? [];
+lines.push(`-- Journeys (${journeys.length}) + SubCards`);
+for (const j of journeys) {
   const highlights = Array.isArray(j.highlights) ? j.highlights : [];
-  // 聚合 cost：优先取 journey.cost；若没有，从 subCards 求和
   let cost: CostObject = j.cost ?? {};
   if (!j.cost && j.subCards) {
     cost = j.subCards.reduce((acc, s) => {
@@ -190,16 +178,13 @@ for (const j of journeysJson) {
         sqlJson(highlights),
         sqlJson(cost),
         sqlStr(j.photo || null),
-        j.id, // sort_order 默认按 id
-      ].join(', ') +
-      ');'
+        j.id,
+      ].join(', ') + ');'
   );
 
-  // 处理 sub_cards
   const subCards: RawSubCard[] = Array.isArray(j.subCards) && j.subCards.length
     ? j.subCards
     : [
-        // 没有 subCards 时生成 default sub_card 承载 journey 信息
         {
           id: `sub-${j.id}-default`,
           name: j.city,
@@ -209,9 +194,9 @@ for (const j of journeysJson) {
           date: j.date,
           endDate: j.endDate,
           emoji: j.emoji,
-          highlights: highlights,
+          highlights,
           itineraryTable: { headers: ['日期', '上午', '下午', '备注'], rows: [] },
-          cost: cost,
+          cost,
           story: j.story,
           photo: j.photo,
         },
@@ -237,15 +222,15 @@ for (const j of journeysJson) {
           sqlJson(s.cost ?? {}),
           sqlStr(s.photo || null),
           idx,
-        ].join(', ') +
-        ');'
+        ].join(', ') + ');'
     );
   });
 }
 
 // ---- Wishlist ----
+const wishlist = data.wishlist ?? [];
 lines.push('');
-lines.push('-- Wishlist');
+lines.push(`-- Wishlist (${wishlist.length})`);
 wishlist.forEach((w, idx) => {
   lines.push(
     `INSERT INTO wishlist (title, city, emoji, season, duration, description, highlights_json, sort_order) VALUES (` +
@@ -258,47 +243,52 @@ wishlist.forEach((w, idx) => {
         sqlStr(w.description),
         sqlJson(Array.isArray(w.highlights) ? w.highlights : []),
         idx,
-      ].join(', ') +
-      ');'
+      ].join(', ') + ');'
   );
 });
 
 // ---- City Coords ----
+const coords = data.coords ?? [];
 lines.push('');
-lines.push('-- City Coordinates');
+lines.push(`-- City Coordinates (${coords.length})`);
 coords.forEach(c => {
   lines.push(
     `INSERT INTO city_coords (name, country, lat, lng, type) VALUES (` +
-      [sqlStr(c.name), sqlStr(c.country), c.lat, c.lng, sqlStr(c.type)].join(', ') +
-      ');'
+      [sqlStr(c.name), sqlStr(c.country), c.lat, c.lng, sqlStr(c.type)].join(', ') + ');'
   );
 });
 
 // ---- Packing Items ----
+const packing = data.packing ?? [];
 lines.push('');
-lines.push('-- Packing Items');
-packingItems.forEach((p, idx) => {
+lines.push(`-- Packing Items (${packing.length})`);
+packing.forEach((p, idx) => {
   lines.push(
     `INSERT INTO packing_items (item, note, is_overseas_only, category, sort_order) VALUES (` +
-      [sqlStr(p.item), sqlStr(p.note || null), p.is_overseas_only, sqlStr('全部'), idx].join(', ') +
-      ');'
+      [sqlStr(p.item), sqlStr(p.note || null), p.is_overseas_only ?? 0, sqlStr('全部'), idx].join(', ') + ');'
   );
 });
 
 // ---- Site Settings ----
+const settings = data.settings ?? {};
 lines.push('');
 lines.push('-- Site Settings');
-lines.push(`INSERT INTO site_settings (key, value) VALUES ('hero_title', '探索世界的每一步') ON CONFLICT(key) DO NOTHING;`);
-lines.push(`INSERT INTO site_settings (key, value) VALUES ('hero_subtitle', '记录美好生活') ON CONFLICT(key) DO NOTHING;`);
-lines.push(`INSERT INTO site_settings (key, value) VALUES ('footer_text', 'HSN Journey Traces · 用脚步丈量世界') ON CONFLICT(key) DO NOTHING;`);
+Object.entries(settings).forEach(([k, v]) => {
+  lines.push(
+    `INSERT INTO site_settings (key, value) VALUES (${sqlStr(k)}, ${sqlStr(v)}) ` +
+      `ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now');`
+  );
+});
 
 // -------- 写文件 --------
 const outPath = resolve(root, 'migrations/0002_seed.sql');
 writeFileSync(outPath, lines.join('\n') + '\n', 'utf8');
 
-console.log(`✅ Generated ${outPath}`);
-console.log(`   journeys: ${journeysJson.length}`);
-console.log(`   sub_cards (inc. default): ${journeysJson.reduce((n, j) => n + Math.max(j.subCards?.length ?? 0, 1), 0)}`);
-console.log(`   wishlist: ${wishlist.length}`);
-console.log(`   city_coords: ${coords.length}`);
-console.log(`   packing_items: ${packingItems.length}`);
+console.log(`✅ 生成 ${outPath.replace(root + '/', '')}`);
+console.log(`   journeys:        ${journeys.length}`);
+console.log(`   sub_cards:       ${journeys.reduce((n, j) => n + Math.max(j.subCards?.length ?? 0, 1), 0)} (含 default)`);
+console.log(`   wishlist:        ${wishlist.length}`);
+console.log(`   city_coords:     ${coords.length}`);
+console.log(`   packing_items:   ${packing.length}`);
+console.log(`   site_settings:   ${Object.keys(settings).length}`);
+console.log(`\n👉 下一步: pnpm migrate:remote && pnpm seed:remote`);

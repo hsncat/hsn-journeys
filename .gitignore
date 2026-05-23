@@ -7,6 +7,12 @@ dist/
 .screenshots/
 .claude/
 
+# 私有种子数据（用户复制 seed.example.json → seed.json 后维护私有数据）
+data/seed.json
+
+# seed 生成的 SQL 含具体数据，不进版本控制
+migrations/0002_seed.sql
+
 # OS / Editor
 .DS_Store
 .vscode/

@@ -1,5 +1,5 @@
 /**
- * 多地点拆分（从 legacy/data.js generateLocations 提炼）
+ * 多地点拆分约定
  * - 国际多国：country 含 "·" → 拆国家
  * - 国内跨省：province 含 "&" → 拆省
  * - 国内跨市：city 含 "&" → 拆市
