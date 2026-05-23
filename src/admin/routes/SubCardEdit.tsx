@@ -168,6 +168,7 @@ export default function SubCardEdit({ mode }: Props) {
           <h1>{mode === 'new' ? '新建子卡片' : '编辑子卡片'}</h1>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" className="btn btn-ghost" onClick={() => navigate(-1)}>返回上页</button>
           <Link to={`/journeys/${journeyId}`} className="btn btn-ghost">取消</Link>
           <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
             {saving ? '保存中…' : '保存'}

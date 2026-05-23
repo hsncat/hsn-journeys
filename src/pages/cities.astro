@@ -112,10 +112,14 @@ function searchTokens(j: JourneyDTO): string {
                       )}
                     </div>
                     {j.highlights.length > 0 && (
-                      <div class="primary-spots">
-                        <Fragment set:html={icon('sparkles', { size: 14 })} />
-                        <span>{j.highlights.slice(0, 6).join(' · ')}</span>
-                      </div>
+                      <ul class="primary-spots">
+                        {j.highlights.slice(0, 6).map(h => (
+                          <li>
+                            <span aria-hidden="true">⭐</span>
+                            <span>{h}</span>
+                          </li>
+                        ))}
+                      </ul>
                     )}
                   </div>
                   <div class="primary-chevron" aria-hidden="true">
@@ -508,17 +512,20 @@ function searchTokens(j: JourneyDTO): string {
     gap: 4px;
   }
   .primary-spots {
-    display: inline-flex;
-    align-items: start;
-    gap: 6px;
+    display: grid;
+    gap: 5px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
     font-size: 13px;
     color: var(--color-text-subtle);
     line-height: 1.5;
   }
-  .primary-spots svg {
-    flex-shrink: 0;
-    margin-top: 3px;
-    color: var(--color-warning);
+  .primary-spots li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px;
+    align-items: start;
   }
   .primary-chevron {
     color: var(--color-text-subtle);

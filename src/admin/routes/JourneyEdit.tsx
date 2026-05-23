@@ -286,18 +286,6 @@ export default function JourneyEdit({ mode }: Props) {
         <CostFields value={autoJourney.cost} readOnly />
       </div>
 
-      <div className="admin-card">
-        <h2>封面照片</h2>
-        <PhotoUploader value={autoJourney.photoUrl} onChange={key => update('photoUrl', key)} folder={`journeys/${id || 'new'}`} />
-      </div>
-
-      <div className="admin-card">
-        <h2>旅行故事</h2>
-        <div className="field">
-          <textarea value={autoJourney.story ?? ''} onChange={e => update('story', e.target.value || null)} rows={6} />
-        </div>
-      </div>
-
       {mode === 'new' && (
         <div className="admin-card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -419,6 +407,18 @@ export default function JourneyEdit({ mode }: Props) {
           )}
         </div>
       )}
+
+      <div className="admin-card">
+        <h2>封面照片</h2>
+        <PhotoUploader value={autoJourney.photoUrl} onChange={key => update('photoUrl', key)} folder={`journeys/${id || 'new'}`} />
+      </div>
+
+      <div className="admin-card">
+        <h2>旅行故事</h2>
+        <div className="field">
+          <textarea value={autoJourney.story ?? ''} onChange={e => update('story', e.target.value || null)} rows={6} />
+        </div>
+      </div>
     </div>
   );
 }
