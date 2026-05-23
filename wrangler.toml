@@ -5,7 +5,7 @@ main = "./dist/_worker.js/index.js"
 workers_dev = true
 
 # 你的 Cloudflare 账户 ID（在 dashboard 右下角可见，或运行 `wrangler whoami`）
-# account_id = "YOUR_CLOUDFLARE_ACCOUNT_ID"
+account_id = "095ef4fd66803e2e321e1007ec4ce890"
 
 # Astro 构建出来的静态资产
 [assets]
@@ -18,7 +18,7 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "hsn-journeys-db"
-database_id = "YOUR_D1_DATABASE_ID"
+database_id = "bc418bd7-20e0-4e31-881e-39a709732cfc"
 
 # R2 对象存储绑定（用于照片）
 #   创建：wrangler r2 bucket create hsn-journeys-photos
