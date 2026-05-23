@@ -1,0 +1,49 @@
+{
+  "name": "hsn-journeys",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && node -e \"require('fs').writeFileSync('dist/.assetsignore', '_worker.js\\n_routes.json\\n')\"",
+    "preview": "wrangler dev",
+    "wrangler:dev": "wrangler dev",
+    "deploy": "astro build && wrangler deploy",
+    "migrate:local": "wrangler d1 migrations apply hsn-journeys-db --local",
+    "migrate:remote": "wrangler d1 migrations apply hsn-journeys-db --remote",
+    "seed:local": "wrangler d1 execute hsn-journeys-db --local --file=migrations/0002_seed.sql",
+    "seed:remote": "wrangler d1 execute hsn-journeys-db --remote --file=migrations/0002_seed.sql",
+    "seed:gen": "tsx scripts/seed.ts",
+    "hash": "tsx scripts/hash-password.ts",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^12.6.7",
+    "@astrojs/react": "^4.4.0",
+    "@tailwindcss/vite": "^4.1.7",
+    "@types/leaflet": "^1.9.21",
+    "astro": "^5.16.0",
+    "hono": "^4.10.0",
+    "jose": "^6.1.0",
+    "leaflet": "^1.9.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.10.0",
+    "tailwindcss": "^4.1.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251101.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.0",
+    "wrangler": "^4.50.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "workerd"
+    ]
+  }
+}

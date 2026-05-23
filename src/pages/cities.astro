@@ -1,0 +1,647 @@
+---
+import Layout from '@/components/Layout.astro';
+import { icon } from '@/lib/icons';
+import { listJourneys, type JourneyDTO } from '@/server/db';
+import { fmtDate, fmtDateRange, daysBetween, fmtYear, fmtMoney } from '@/lib/format';
+import { isDomestic } from '@/lib/locations';
+import { totalCost } from '@/lib/itinerary';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime.env;
+const journeys = await listJourneys(env.DB);
+const sorted = [...journeys].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+function searchTokens(j: JourneyDTO): string {
+  return [j.title, j.province, j.city, j.country, ...(j.highlights || []),
+    ...j.subCards.flatMap(s => [s.name, s.city, s.province, ...(s.highlights || [])])]
+    .filter(Boolean).join(' ').toLowerCase();
+}
+---
+
+<Layout title="城市足迹" active="cities">
+  <main class="cities">
+    <header class="cities-header">
+      <p class="eyebrow">All Journeys</p>
+      <h1>我的城市足迹</h1>
+      <p class="page-sub">{sorted.length} 段旅程 · 用脚步丈量世界</p>
+    </header>
+
+    <div class="cities-toolbar">
+      <div class="search">
+        <Fragment set:html={icon('search', { size: 18 })} />
+        <input
+          id="city-search"
+          type="search"
+          placeholder="搜索城市、景点或国家…"
+          autocomplete="off"
+        />
+      </div>
+      <div class="filter-chips" role="tablist">
+        <button class="chip-filter is-active" data-filter="all" type="button">全部</button>
+        <button class="chip-filter" data-filter="domestic" type="button">国内</button>
+        <button class="chip-filter" data-filter="international" type="button">国外</button>
+      </div>
+      <div class="toolbar-actions">
+        <button id="toggle-all" type="button" class="ghost-btn">
+          <Fragment set:html={icon('chevronDown', { size: 16 })} />
+          <span>展开全部</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="cities-layout">
+      <aside class="timeline" aria-label="旅行时间线">
+        <p class="eyebrow eyebrow--side">Timeline</p>
+        <h2>旅行时间线</h2>
+        <ol id="timeline-list">
+          {sorted.map((j, i) => (
+            <li class:list={['tl-item', i === 0 && 'is-active']}>
+              <a href={`#journey-${j.id}`}>
+                <span class="tl-year">{fmtYear(j.date)}</span>
+                <span class="tl-title">{j.title}</span>
+                <span class="tl-date">{fmtDateRange(j.date, j.endDate)}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </aside>
+
+      <div class="city-grid" id="city-grid">
+        {sorted.map((j) => {
+          const intl = !isDomestic(j.country);
+          const tokens = searchTokens(j);
+          const total = totalCost(j.cost);
+          const subList = j.subCards;
+          return (
+            <article
+              class="primary-wrapper"
+              id={`journey-${j.id}`}
+              data-id={j.id}
+              data-tokens={tokens}
+              data-region={intl ? 'international' : 'domestic'}
+            >
+              <details>
+                <summary class="primary-card">
+                  <div class="primary-emoji" aria-hidden="true">{j.emoji ?? '🌏'}</div>
+                  <div class="primary-content">
+                    <div class="primary-head">
+                      <h3 class="primary-title">{j.title || `${j.province} · ${j.city}`}</h3>
+                      <span class={`pill ${intl ? 'pill-red' : 'pill-blue'}`}>
+                        {intl ? '国际' : '国内'}
+                      </span>
+                    </div>
+                    <div class="primary-meta">
+                      <span>
+                        <Fragment set:html={icon('calendar', { size: 14 })} />
+                        {fmtDateRange(j.date, j.endDate)}
+                      </span>
+                      <span>
+                        <Fragment set:html={icon('compass', { size: 14 })} />
+                        {daysBetween(j.date, j.endDate)}天
+                      </span>
+                      <span>
+                        <Fragment set:html={icon('mapPin', { size: 14 })} />
+                        {j.country}
+                      </span>
+                      {total > 0 && (
+                        <span class="tabular">
+                          <Fragment set:html={icon('dollarSign', { size: 14 })} />
+                          ¥{fmtMoney(total)}
+                        </span>
+                      )}
+                    </div>
+                    {j.highlights.length > 0 && (
+                      <div class="primary-spots">
+                        <Fragment set:html={icon('sparkles', { size: 14 })} />
+                        <span>{j.highlights.slice(0, 6).join(' · ')}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div class="primary-chevron" aria-hidden="true">
+                    <Fragment set:html={icon('chevronDown', { size: 22 })} />
+                  </div>
+                </summary>
+
+                <div class="primary-body">
+                  {j.description && <p class="primary-desc">{j.description}</p>}
+                  {subList.length > 0 && (
+                    <div class="subcards">
+                      {subList.map(s => {
+                        const subTotal = totalCost(s.cost);
+                        return (
+                          <a href={`/detail/${j.id}?sub=${encodeURIComponent(s.id)}`} class="subcard">
+                            <div class="subcard__date tabular">
+                              <span>{fmtDate(s.date, { short: true })}</span>
+                              {s.endDate && s.endDate !== s.date && (
+                                <span>~ {fmtDate(s.endDate, { short: true })}</span>
+                              )}
+                            </div>
+                            <div class="subcard__main">
+                              <h4>
+                                <span class="emoji" aria-hidden="true">{s.emoji ?? '📍'}</span>
+                                {s.name}
+                              </h4>
+                              {(s.highlights || []).length > 0 && (
+                                <div class="subcard__chips">
+                                  {s.highlights.slice(0, 5).map(h => <span class="chip">{h}</span>)}
+                                </div>
+                              )}
+                              {s.story && <p class="subcard__story">{s.story}</p>}
+                            </div>
+                            {subTotal > 0 && (
+                              <div class="subcard__cost tabular">
+                                <Fragment set:html={icon('dollarSign', { size: 12 })} />
+                                ¥{fmtMoney(subTotal)}
+                              </div>
+                            )}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div class="primary-actions">
+                    <a href={`/detail/${j.id}`} class="ghost-btn">
+                      <Fragment set:html={icon('eye', { size: 14 })} />
+                      <span>查看详情</span>
+                    </a>
+                  </div>
+                </div>
+              </details>
+            </article>
+          );
+        })}
+
+        <div id="empty-state" class="empty-state" hidden>
+          <Fragment set:html={icon('compass', { size: 48 })} />
+          <h3>没有匹配的旅程</h3>
+          <p>试试别的关键词，或者切换筛选条件</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  const $search = document.getElementById('city-search') as HTMLInputElement;
+  const $grid = document.getElementById('city-grid')!;
+  const $empty = document.getElementById('empty-state') as HTMLElement;
+  const $chips = document.querySelectorAll<HTMLButtonElement>('.chip-filter');
+  const $toggleAll = document.getElementById('toggle-all') as HTMLButtonElement;
+  const $tlItems = document.querySelectorAll<HTMLLIElement>('.tl-item');
+
+  let activeFilter: 'all' | 'domestic' | 'international' = 'all';
+  let allExpanded = false;
+  let timer: number | undefined;
+
+  function applyFilter() {
+    const q = $search.value.trim().toLowerCase();
+    let visible = 0;
+    document.querySelectorAll<HTMLElement>('.primary-wrapper').forEach(card => {
+      const tokens = card.dataset.tokens ?? '';
+      const region = card.dataset.region;
+      const matchSearch = !q || tokens.includes(q);
+      const matchFilter = activeFilter === 'all' || activeFilter === region;
+      const show = matchSearch && matchFilter;
+      card.hidden = !show;
+      if (show) visible++;
+    });
+    $empty.hidden = visible > 0;
+  }
+
+  $search.addEventListener('input', () => {
+    if (timer) clearTimeout(timer);
+    timer = window.setTimeout(applyFilter, 180);
+  });
+
+  $chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      $chips.forEach(c => c.classList.remove('is-active'));
+      chip.classList.add('is-active');
+      activeFilter = (chip.dataset.filter as typeof activeFilter) || 'all';
+      applyFilter();
+    });
+  });
+
+  $toggleAll.addEventListener('click', () => {
+    allExpanded = !allExpanded;
+    document.querySelectorAll<HTMLDetailsElement>('.primary-wrapper details').forEach(d => {
+      d.open = allExpanded;
+    });
+    $toggleAll.querySelector('span')!.textContent = allExpanded ? '收起全部' : '展开全部';
+    $toggleAll.querySelector('svg')!.style.transform = allExpanded ? 'rotate(180deg)' : '';
+  });
+
+  // 时间线点击高亮
+  $tlItems.forEach(li => {
+    const a = li.querySelector('a')!;
+    a.addEventListener('click', () => {
+      $tlItems.forEach(x => x.classList.remove('is-active'));
+      li.classList.add('is-active');
+      const id = a.getAttribute('href');
+      if (id) {
+        const target = document.querySelector<HTMLDetailsElement>(`${id} details`);
+        if (target) {
+          target.open = true;
+          setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+        }
+      }
+    });
+  });
+</script>
+
+<style>
+  .cities {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 48px 24px 0;
+  }
+  .cities-header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    font-size: 11px;
+    color: var(--color-text-subtle);
+    margin: 0 0 8px;
+  }
+  .eyebrow--side { text-align: left; }
+  .cities-header h1 {
+    font-size: clamp(40px, 6vw, 60px);
+    margin: 0 0 8px;
+  }
+  .page-sub {
+    color: var(--color-text-muted);
+    font-size: 15px;
+  }
+
+  /* Toolbar */
+  .cities-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 0 0 32px;
+    padding: 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+  }
+  .search {
+    flex: 1 1 240px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    height: 40px;
+    background: var(--color-surface-alt);
+    border-radius: 999px;
+    color: var(--color-text-muted);
+  }
+  .search input {
+    flex: 1;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font: inherit;
+    color: var(--color-text);
+  }
+  .filter-chips {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: var(--color-surface-alt);
+    border-radius: 999px;
+  }
+  .chip-filter {
+    border: 0;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 200ms var(--ease-out);
+  }
+  .chip-filter:hover { color: var(--color-text); }
+  .chip-filter.is-active {
+    background: var(--color-surface);
+    color: var(--color-primary);
+    box-shadow: var(--shadow-sm);
+  }
+  .toolbar-actions { display: flex; gap: 8px; }
+  .ghost-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: transparent;
+    border: 1px solid var(--color-border-strong);
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+    color: var(--color-text);
+    text-decoration: none;
+    transition: all 200ms var(--ease-out);
+  }
+  .ghost-btn:hover {
+    background: var(--color-surface);
+    border-color: var(--color-primary);
+  }
+  .ghost-btn svg { transition: transform 200ms; }
+
+  /* Layout */
+  .cities-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 32px;
+  }
+  @media (max-width: 960px) {
+    .cities-layout { grid-template-columns: 1fr; }
+    .timeline { display: none; }
+  }
+
+  /* Timeline */
+  .timeline {
+    position: sticky;
+    top: 96px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    align-self: start;
+  }
+  .timeline h2 {
+    font-size: 28px;
+    margin: 0 0 16px;
+  }
+  .timeline ol { list-style: none; margin: 0; padding: 0; }
+  .tl-item {
+    border-left: 2px solid var(--color-border);
+    padding-left: 16px;
+    padding-bottom: 16px;
+    position: relative;
+  }
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 6px;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--color-border-strong);
+    border: 2px solid var(--color-bg);
+  }
+  .tl-item.is-active { border-left-color: var(--color-accent); }
+  .tl-item.is-active::before { background: var(--color-accent); }
+  .tl-item a {
+    display: block;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    transition: color 200ms;
+  }
+  .tl-item a:hover { color: var(--color-primary); }
+  .tl-year {
+    display: inline-block;
+    font-family: var(--font-display);
+    font-size: 16px;
+    color: var(--color-text-subtle);
+  }
+  .tl-title {
+    display: block;
+    color: var(--color-text);
+    font-weight: 500;
+    font-size: 14px;
+  }
+  .tl-date {
+    display: block;
+    font-size: 11px;
+    color: var(--color-text-subtle);
+    margin-top: 2px;
+  }
+
+  /* Primary Card */
+  .city-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 64px;
+  }
+  .primary-wrapper {
+    transition: all 200ms;
+  }
+  .primary-wrapper details {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: all 250ms var(--ease-out);
+  }
+  .primary-wrapper details:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.06), 0 16px 36px rgba(0,0,0,0.06);
+    border-color: rgba(24,24,27,0.10);
+  }
+  .primary-card {
+    list-style: none;
+    cursor: pointer;
+    padding: 24px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 20px;
+    align-items: center;
+    user-select: none;
+  }
+  .primary-card::-webkit-details-marker { display: none; }
+  .primary-emoji {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, var(--color-accent-soft), var(--color-surface-alt));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 44px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.04));
+  }
+  .primary-content { min-width: 0; }
+  .primary-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .primary-title {
+    font-size: 32px;
+    margin: 0;
+    line-height: 1.15;
+  }
+  .pill {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    background: var(--color-surface-alt);
+  }
+  .pill-blue { color: var(--color-accent); background: var(--color-accent-soft); }
+  .pill-red { color: var(--color-danger); background: var(--color-danger-soft); }
+  .primary-meta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    color: var(--color-text-muted);
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+  .primary-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .primary-spots {
+    display: inline-flex;
+    align-items: start;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--color-text-subtle);
+    line-height: 1.5;
+  }
+  .primary-spots svg {
+    flex-shrink: 0;
+    margin-top: 3px;
+    color: var(--color-warning);
+  }
+  .primary-chevron {
+    color: var(--color-text-subtle);
+    transition: transform 200ms var(--ease-out);
+  }
+  details[open] .primary-chevron { transform: rotate(180deg); }
+
+  .primary-body {
+    padding: 0 24px 24px;
+    border-top: 1px solid var(--color-border);
+    padding-top: 20px;
+    margin-top: -4px;
+  }
+  .primary-desc {
+    color: var(--color-text-muted);
+    font-size: 14px;
+    margin: 0 0 16px;
+    line-height: 1.7;
+  }
+
+  /* SubCards */
+  .subcards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .subcard {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+    padding: 14px 16px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 200ms var(--ease-out);
+  }
+  .subcard:hover {
+    transform: translateX(2px);
+    border-color: var(--color-primary);
+    background: var(--color-surface);
+  }
+  .subcard__date {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 13px;
+    color: var(--color-text-muted);
+    min-width: 64px;
+  }
+  .subcard__main h4 {
+    font-family: var(--font-body);
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .subcard__main h4 .emoji { font-size: 18px; }
+  .subcard__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .subcard__story {
+    font-size: 12px;
+    color: var(--color-text-subtle);
+    margin: 4px 0 0;
+    line-height: 1.5;
+  }
+  .subcard__cost {
+    align-self: center;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .chip {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--color-surface-alt);
+    font-size: 11px;
+    color: var(--color-text-muted);
+  }
+  .primary-actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 64px 24px;
+    color: var(--color-text-subtle);
+  }
+  .empty-state svg { color: var(--color-text-faint); }
+  .empty-state h3 { font-size: 24px; margin: 12px 0 4px; }
+  .empty-state p { margin: 0; font-size: 14px; }
+
+  @media (max-width: 768px) {
+    .primary-card {
+      grid-template-columns: auto 1fr;
+      gap: 16px;
+    }
+    .primary-chevron {
+      grid-column: 1 / -1;
+      justify-self: end;
+      margin-top: -32px;
+    }
+    .primary-emoji {
+      width: 56px;
+      height: 56px;
+      font-size: 32px;
+      border-radius: 14px;
+    }
+    .primary-title { font-size: 24px; }
+    .subcard { grid-template-columns: 1fr; }
+    .subcard__date { flex-direction: row; gap: 8px; }
+  }
+</style>

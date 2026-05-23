@@ -1,0 +1,154 @@
+---
+import Layout from '@/components/Layout.astro';
+import { icon } from '@/lib/icons';
+import { listWishlist } from '@/server/db';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime.env;
+const wishlist = await listWishlist(env.DB);
+---
+
+<Layout title="心愿单" active="wishlist">
+  <main class="wishlist">
+    <header class="hero hero--compact">
+      <p class="eyebrow">Wishlist</p>
+      <h1>旅游心愿单</h1>
+      <p class="sub">世界那么大 · 想去的地方还有 {wishlist.length} 个</p>
+    </header>
+
+    {wishlist.length === 0 ? (
+      <div class="empty">
+        <Fragment set:html={icon('heart', { size: 48 })} />
+        <h3>心愿单空空如也</h3>
+        <p>把下一段旅程先收藏起来吧</p>
+      </div>
+    ) : (
+      <div class="grid">
+        {wishlist.map(w => (
+          <article class="wish-card">
+            <div class="wish-card__head">
+              <span class="emoji" aria-hidden="true">{w.emoji ?? '✈️'}</span>
+              <h3>{w.title}</h3>
+            </div>
+            <div class="wish-card__meta">
+              <span><Fragment set:html={icon('mapPin', { size: 13 })} /> {w.city}</span>
+              {w.season && <span><Fragment set:html={icon('calendar', { size: 13 })} /> {w.season}</span>}
+              {w.duration && <span><Fragment set:html={icon('compass', { size: 13 })} /> {w.duration}</span>}
+            </div>
+            {w.description && <p class="wish-card__desc">{w.description}</p>}
+            {w.highlights.length > 0 && (
+              <div class="wish-card__chips">
+                {w.highlights.map(h => <span class="chip-warm">{h}</span>)}
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    )}
+  </main>
+</Layout>
+
+<style>
+  .wishlist {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 48px 24px 0;
+  }
+  .hero--compact {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    font-size: 11px;
+    color: var(--color-text-subtle);
+    margin: 0 0 8px;
+  }
+  .hero--compact h1 {
+    font-size: clamp(40px, 6vw, 60px);
+    margin: 0;
+  }
+  .sub {
+    color: var(--color-text-muted);
+    font-size: 15px;
+    margin: 8px 0 0;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    padding-bottom: 64px;
+  }
+  .wish-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: all 250ms var(--ease-out);
+  }
+  .wish-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.06), 0 16px 36px rgba(0,0,0,0.06);
+    border-color: rgba(24,24,27,0.10);
+  }
+  .wish-card__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .wish-card__head .emoji {
+    font-size: 36px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.04));
+  }
+  .wish-card__head h3 {
+    font-size: 26px;
+    margin: 0;
+    line-height: 1.2;
+  }
+  .wish-card__meta {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    color: var(--color-text-muted);
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+  .wish-card__meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .wish-card__desc {
+    margin: 0 0 14px;
+    color: var(--color-text);
+    line-height: 1.7;
+    font-size: 14px;
+  }
+  .wish-card__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .chip-warm {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--color-warning-soft);
+    color: #92400E;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 96px 24px;
+    color: var(--color-text-subtle);
+  }
+  .empty svg { color: var(--color-warning); }
+  .empty h3 { font-size: 24px; margin: 16px 0 4px; }
+  .empty p { margin: 0; }
+</style>

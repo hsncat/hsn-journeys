@@ -1,0 +1,25 @@
+---
+import Layout from '@/components/Layout.astro';
+import AdminApp from '@/admin/App';
+import { verifySession } from '@/server/auth';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime.env;
+const token = Astro.cookies.get('hsn_session')?.value;
+const session = token ? await verifySession(token, env.JWT_SECRET) : null;
+if (!session) {
+  return Astro.redirect('/admin/login');
+}
+---
+
+<Layout title="管理后台" noNav>
+  <div id="admin-root">
+    <AdminApp client:only="react" username={session.username} />
+  </div>
+</Layout>
+
+<style is:global>
+  body { background: #FAFAFA; }
+  #admin-root { min-height: 100vh; }
+</style>

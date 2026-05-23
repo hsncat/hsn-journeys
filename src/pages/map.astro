@@ -1,0 +1,158 @@
+---
+import Layout from '@/components/Layout.astro';
+import { icon } from '@/lib/icons';
+import { listCoords, listJourneys } from '@/server/db';
+import { generateLocations, isDomestic } from '@/lib/locations';
+import LeafletMap from '@/components/LeafletMap';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime.env;
+const [coords, journeys] = await Promise.all([
+  listCoords(env.DB),
+  listJourneys(env.DB),
+]);
+
+const locations = journeys.flatMap(j =>
+  generateLocations(j).map(loc => ({
+    name: loc.name,
+    country: loc.country ?? j.country,
+    type: (isDomestic(loc.country ?? j.country) ? 'domestic' : 'international') as 'domestic' | 'international',
+    journeyTitles: [j.title],
+  }))
+);
+---
+
+<Layout title="足迹地图" active="map">
+  <main class="map-page">
+    <aside class="map-overlay" id="map-overlay">
+      <button class="overlay-close" id="map-overlay-close" aria-label="关闭说明">
+        <Fragment set:html={icon('x', { size: 18 })} />
+      </button>
+      <h2>
+        <Fragment set:html={icon('mapPinned', { size: 22 })} />
+        我的足迹地图
+      </h2>
+      <p>点击标记查看旅行记录</p>
+      <ul class="legend">
+        <li><span class="dot dot-blue"></span> 国内</li>
+        <li><span class="dot dot-red"></span> 国际</li>
+      </ul>
+      <p class="muted">已记录 {locations.length} 个位置 · {coords.length} 个精确坐标</p>
+    </aside>
+    <button class="overlay-open" id="map-overlay-open" aria-label="打开说明">
+      <Fragment set:html={icon('info', { size: 20 })} />
+    </button>
+
+    <LeafletMap client:only="react" coords={coords} locations={locations} />
+  </main>
+</Layout>
+
+<script>
+  const overlay = document.getElementById('map-overlay')!;
+  const openBtn = document.getElementById('map-overlay-open')!;
+  const closeBtn = document.getElementById('map-overlay-close')!;
+  closeBtn.addEventListener('click', () => {
+    overlay.classList.add('hidden');
+    openBtn.classList.remove('hidden');
+  });
+  openBtn.addEventListener('click', () => {
+    overlay.classList.remove('hidden');
+    openBtn.classList.add('hidden');
+  });
+  openBtn.classList.add('hidden');
+</script>
+
+<style>
+  .map-page {
+    position: relative;
+  }
+  .map-overlay {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 500;
+    width: 280px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+    transition: opacity 200ms, transform 200ms;
+  }
+  .map-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(20px);
+  }
+  .map-overlay h2 {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 22px;
+    margin: 0 0 8px;
+  }
+  .map-overlay p {
+    margin: 4px 0;
+    color: var(--color-text-muted);
+    font-size: 13px;
+  }
+  .map-overlay .muted {
+    margin-top: 10px;
+    color: var(--color-text-subtle);
+    font-size: 11px;
+  }
+  .overlay-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-subtle);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+  }
+  .overlay-close:hover { color: var(--color-text); background: var(--color-surface-alt); }
+  .legend {
+    list-style: none;
+    margin: 12px 0;
+    padding: 0;
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--color-text);
+  }
+  .dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    margin-right: 4px;
+    vertical-align: middle;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.04);
+  }
+  .dot-blue { background: var(--color-accent); }
+  .dot-red { background: var(--color-danger); }
+  .overlay-open {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 500;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(12px);
+    color: var(--color-primary);
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 200ms, transform 200ms;
+  }
+  .overlay-open.hidden { opacity: 0; pointer-events: none; transform: translateX(20px); }
+</style>

@@ -1,0 +1,160 @@
+/* ==========================================================================
+   HSN Journey Traces — Global Stylesheet
+   Tailwind v4 + Design Tokens (源自 legacy/design-system/hsn-journey-traces/MASTER.md)
+   ========================================================================== */
+
+@import "tailwindcss";
+
+/* ----- Design Token: @theme 让 Tailwind 生成对应工具类 ----- */
+@theme {
+  /* —— Color —— */
+  --color-bg: #FAFAFA;
+  --color-surface: #FFFFFF;
+  --color-surface-alt: #F4F4F5;
+  --color-surface-hover: #FAFAFA;
+  --color-border: #E4E4E7;
+  --color-border-strong: #D4D4D8;
+  --color-divider: #27272A;
+
+  --color-text: #09090B;
+  --color-text-muted: #52525B;
+  --color-text-subtle: #71717A;
+  --color-text-faint: #A1A1AA;
+  --color-text-inverse: #FAFAFA;
+
+  --color-primary: #18181B;
+  --color-primary-soft: rgba(24, 24, 27, 0.04);
+
+  --color-accent: #2563EB;
+  --color-accent-hover: #1D4ED8;
+  --color-accent-soft: #EFF6FF;
+  --color-accent-glow: rgba(37, 99, 235, 0.35);
+  --color-accent-ring: rgba(37, 99, 235, 0.15);
+
+  --color-success: #16A34A;
+  --color-success-soft: #DCFCE7;
+
+  --color-danger: #DC2626;
+  --color-danger-soft: #FEE2E2;
+  --color-danger-soft-hover: #FECACA;
+
+  --color-warning: #EAB308;
+  --color-warning-soft: #FEF9C3;
+
+  /* —— Typography —— */
+  --font-body: 'Quicksand', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: 'Caveat', "Ma Shan Zheng", cursive;
+  --font-numeric: 'Quicksand', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* —— Radius —— */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 9999px;
+
+  /* —— Shadow （多层渐进阴影，更精致）—— */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 4px 8px rgba(0, 0, 0, 0.06), 0 16px 40px rgba(0, 0, 0, 0.08);
+  --shadow-focus: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  --shadow-focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.35);
+
+  /* —— Spacing —— */
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.25rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-10: 2.5rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+  --spacing-24: 6rem;
+
+  /* —— Motion —— */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-slow: 300ms;
+}
+
+/* ----- 全局基础样式 ----- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  font-feature-settings: "ss01" on, "ss02" on, "cv11" on;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  line-height: 1.2;
+  margin: 0;
+}
+
+.font-numeric,
+.tabular {
+  font-feature-settings: "tnum" on, "lnum" on;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* ----- Focus 状态 ----- */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+button,
+a {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* ----- 选区颜色 ----- */
+::selection {
+  background-color: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+/* ----- 滚动条精修 ----- */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong);
+}
+
+/* ----- 暗黑模式预留（未启用，但 token 已就位）----- */
+/* @media (prefers-color-scheme: dark) { ... } */
