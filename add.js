@@ -8,12 +8,13 @@
 
     const Icons = window.HsnIcons;
     const esc = HsnUI.escapeHtml;
+    let photoDataUrl = '';
 
     document.addEventListener('DOMContentLoaded', function () {
         renderParentOptions();
         renderItineraryEditor(defaultTable());
         wireForm();
-        wireAutoResizeTextareas();
+        wirePhotoInput();
     });
 
     function defaultTable() {
@@ -42,12 +43,34 @@
         return { headers: headers, rows: rows };
     }
 
+    function numericCost(cost) {
+        cost = cost || {};
+        return {
+            package: Number(cost.package) || 0,
+            transport: Number(cost.transport) || 0,
+            accommodation: Number(cost.accommodation) || 0,
+            food: Number(cost.food) || 0,
+            shopping: Number(cost.shopping) || 0,
+            ticket: Number(cost.ticket) || 0,
+        };
+    }
+
+    function unique(list) {
+        const seen = {};
+        return (list || []).filter(function (item) {
+            const key = String(item || '').trim();
+            if (!key || seen[key]) return false;
+            seen[key] = true;
+            return true;
+        });
+    }
+
     function renderParentOptions() {
         const select = document.getElementById('add-parent');
         if (!select) return;
         const requestedParent = new URLSearchParams(window.location.search).get('parent');
         const options = (typeof journeys !== 'undefined' ? journeys : []).map(function (j) {
-            const label = j.province && j.province !== j.city ? j.province + ' · ' + j.city : (j.province || j.city || j.title || '未命名');
+            const label = j.title || (j.province && j.province !== j.city ? j.province + ' · ' + j.city : (j.province || j.city || '未命名'));
             return '<option value="' + j.id + '"' + (String(j.id) === String(requestedParent) ? ' selected' : '') + '>' + esc(label) + '</option>';
         }).join('');
         select.innerHTML = '<option value="new"' + (!requestedParent ? ' selected' : '') + '>新建一级卡片</option>' + options;
@@ -87,7 +110,11 @@
                     + '<button type="button" class="itinerary-action-btn itinerary-action-btn--danger" data-action="delete-row" aria-label="删除该行">' + Icons.svg('trash2', { size: 12 }) + '</button>'
                 + '</span>'
                 : '';
-            cells.push('<td><div class="sub-itinerary-frame"><textarea class="sub-itinerary-cell" rows="2">' + esc(row && row[i] || '') + '</textarea>' + actions + '</div></td>');
+            const isDate = i === 0;
+            const control = isDate
+                ? '<input type="date" class="sub-itinerary-cell sub-itinerary-date" value="' + esc(row && row[i] || '') + '">'
+                : '<textarea class="sub-itinerary-cell" rows="2">' + esc(row && row[i] || '') + '</textarea>';
+            cells.push('<td><div class="sub-itinerary-frame">' + control + actions + '</div></td>');
         }
         return '<tr>' + cells.join('') + '</tr>';
     }
@@ -141,17 +168,37 @@
     }
 
     function syncPrimaryFromSubcards(journey) {
-        const sub = journey.subCards[0];
-        journey.province = sub.province;
-        journey.city = sub.city;
-        journey.country = sub.country;
-        journey.date = sub.date;
-        journey.endDate = sub.endDate || sub.date;
-        journey.title = sub.city;
-        journey.emoji = sub.emoji;
-        journey.highlights = sub.highlights;
-        journey.cost = sub.cost;
-        journey.story = sub.story;
+        const subcards = journey.subCards || [];
+        if (!subcards.length) return journey;
+        if (subcards.length === 1) {
+            const sub = subcards[0];
+            journey.province = sub.province;
+            journey.city = sub.city;
+            journey.country = sub.country;
+            journey.date = sub.date;
+            journey.endDate = sub.endDate || sub.date;
+            journey.title = sub.name || sub.city;
+            journey.emoji = sub.emoji;
+            journey.highlights = sub.highlights || [];
+            journey.cost = numericCost(sub.cost);
+            journey.photo = sub.photo || journey.photo || '';
+            return journey;
+        }
+        const dates = subcards.map(function (s) { return s.date; }).filter(Boolean).sort();
+        const endDates = subcards.map(function (s) { return s.endDate || s.date; }).filter(Boolean).sort();
+        journey.title = unique(subcards.map(function (s) { return s.name || s.city; })).join(' · ') || journey.title;
+        journey.province = unique(subcards.map(function (s) { return s.province; })).join(' · ') || journey.province;
+        journey.city = unique(subcards.map(function (s) { return s.city; })).join(' · ') || journey.city;
+        journey.country = unique(subcards.map(function (s) { return s.country; })).join(' · ') || journey.country;
+        journey.date = dates[0] || journey.date;
+        journey.endDate = endDates[endDates.length - 1] || journey.endDate;
+        journey.highlights = unique([].concat.apply([], subcards.map(function (s) { return s.highlights || []; }))).slice(0, 8);
+        journey.cost = subcards.reduce(function (sum, sub) {
+            const cost = numericCost(sub.cost);
+            Object.keys(sum).forEach(function (key) { sum[key] += cost[key] || 0; });
+            return sum;
+        }, { package: 0, transport: 0, accommodation: 0, food: 0, shopping: 0, ticket: 0 });
+        journey.photo = subcards.map(function (s) { return s.photo; }).filter(Boolean)[0] || journey.photo || '';
         return journey;
     }
 
@@ -195,14 +242,61 @@
         });
     }
 
-    function wireAutoResizeTextareas() {
-        document.querySelectorAll('.journey-story-textarea').forEach(function (textarea) {
-            function resize() {
-                textarea.style.height = 'auto';
-                textarea.style.height = Math.max(textarea.scrollHeight, textarea.offsetHeight) + 'px';
+    function wirePhotoInput() {
+        const icon = document.querySelector('#add-photo-label .photo-input__icon');
+        if (icon) icon.innerHTML = Icons.svg('camera', { size: 28 });
+        const remove = document.getElementById('add-photo-remove');
+        if (remove) remove.innerHTML = Icons.svg('x', { size: 16 });
+        const input = document.getElementById('add-photo-input');
+        const label = document.getElementById('add-photo-label');
+        const preview = document.getElementById('add-photo-preview');
+        const img = document.getElementById('add-photo-img');
+        if (!input || !label || !preview || !img || !remove) return;
+
+        function setPhoto(dataUrl) {
+            photoDataUrl = dataUrl;
+            img.src = dataUrl;
+            preview.classList.remove('is-hidden');
+            label.classList.add('is-hidden');
+        }
+
+        function clearPhoto() {
+            photoDataUrl = '';
+            input.value = '';
+            img.src = '';
+            preview.classList.add('is-hidden');
+            label.classList.remove('is-hidden');
+        }
+
+        function handleFile(file) {
+            if (!file) return;
+            if (!/^image\//.test(file.type)) {
+                HsnUI.toast('请选择图片文件', 'error');
+                return;
             }
-            textarea.addEventListener('input', resize);
-            setTimeout(resize, 0);
+            HsnUI.compressImage(file, { maxW: 1600, quality: 0.8 })
+                .then(setPhoto)
+                .catch(function () { HsnUI.toast('图片处理失败', 'error'); });
+        }
+
+        input.addEventListener('change', function () {
+            handleFile(input.files && input.files[0]);
+        });
+        remove.addEventListener('click', clearPhoto);
+        ['dragenter', 'dragover'].forEach(function (ev) {
+            label.addEventListener(ev, function (e) {
+                e.preventDefault();
+                label.classList.add('is-dragging');
+            });
+        });
+        ['dragleave', 'drop'].forEach(function (ev) {
+            label.addEventListener(ev, function (e) {
+                e.preventDefault();
+                label.classList.remove('is-dragging');
+            });
+        });
+        label.addEventListener('drop', function (e) {
+            handleFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
         });
     }
 
@@ -236,7 +330,8 @@
                 shopping: numeric('add-cost-shopping'),
                 ticket: numeric('add-cost-ticket'),
             },
-            story: getValue('add-story'),
+            story: '',
+            photo: photoDataUrl || '',
         };
 
         const parent = getValue('add-parent') || 'new';
@@ -262,9 +357,11 @@
                 highlights: target.highlights || [],
                 cost: target.cost || {},
                 story: target.story || '',
+                photo: target.photo || '',
             }];
             subcards.push(subCard);
             target.subCards = subcards;
+            syncPrimaryFromSubcards(target);
             updateJourney(target.id, target);
             targetId = target.id;
             subIndex = subcards.length - 1;

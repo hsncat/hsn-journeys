@@ -79,8 +79,19 @@
             </section>
 
             <section class="form-section">
-                <h2 class="form-section__title">这段旅程的故事</h2>
-                <textarea id="add-story" class="journey-story-textarea" rows="5"></textarea>
+                <h2 class="form-section__title">照片</h2>
+                <div class="photo-input">
+                    <label for="add-photo-input" class="photo-input__drop" id="add-photo-label">
+                        <span class="photo-input__icon" aria-hidden="true"></span>
+                        <span class="photo-input__text">点击或拖拽上传照片</span>
+                        <span class="photo-input__hint">JPG / PNG · 自动压缩至 1600px，保存到 data/journeys.json</span>
+                    </label>
+                    <input type="file" id="add-photo-input" accept="image/*" hidden>
+                </div>
+                <div class="photo-preview is-hidden" id="add-photo-preview">
+                    <img id="add-photo-img" src="" alt="行程照片">
+                    <button type="button" class="icon-btn icon-btn--sm photo-preview__remove" id="add-photo-remove" aria-label="移除照片"></button>
+                </div>
             </section>
         </form>
     </main>

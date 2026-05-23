@@ -53,9 +53,9 @@
 
     function createJourneyCard(j) {
         const esc = HsnUI.escapeHtml;
-        const title = j.province && j.province !== j.city
+        const title = j.title ? esc(j.title) : (j.province && j.province !== j.city
             ? esc(j.province) + ' · ' + esc(j.city)
-            : esc(j.province || j.city);
+            : esc(j.province || j.city));
 
         const spots = (j.highlights || []).slice(0, 4).map(esc).join(' · ');
         const pin = HsnIcons.svg('mapPin', { size: 16 });

@@ -167,7 +167,7 @@
         timeline.innerHTML = list.map(function (j, index) {
             const year = j.date ? String(j.date).slice(0, 4) : '未知';
             const range = formatDateRange(j.date, j.endDate);
-            const title = j.province && j.province !== j.city ? j.province + ' · ' + j.city : (j.province || j.city || '未命名旅程');
+            const title = j.title || (j.province && j.province !== j.city ? j.province + ' · ' + j.city : (j.province || j.city || '未命名旅程'));
             return ''
                 + '<li class="timeline-item' + (index === 0 ? ' is-active' : '') + '">'
                 +   '<button type="button" class="timeline-link" data-target="' + j.id + '">'
@@ -333,6 +333,7 @@
 
         const dates = subcards.map(function (s) { return s.date; }).filter(Boolean).sort();
         const endDates = subcards.map(function (s) { return s.endDate || s.date; }).filter(Boolean).sort();
+        const names = unique(subcards.map(function (s) { return s.name || s.city; }));
         const cities = unique(subcards.map(function (s) { return s.city; }));
         const provinces = unique(subcards.map(function (s) { return s.province; }));
         const countries = unique(subcards.map(function (s) { return s.country; }));
@@ -348,9 +349,10 @@
             country: allChina ? '中国' : countries.join('·'),
             date: dates[0] || journey.date,
             endDate: endDates[endDates.length - 1] || journey.endDate || journey.date,
-            title: opts.forceTitle ? generatedTitle : (journey.title || generatedTitle),
+            title: names.join(' · ') || (opts.forceTitle ? generatedTitle : (journey.title || generatedTitle)),
             highlights: highlights,
             cost: sumCosts(subcards),
+            photo: subcards.map(function (s) { return s.photo; }).filter(Boolean)[0] || journey.photo || '',
             subCards: subcards,
         });
         return journey;
@@ -440,9 +442,9 @@
         wrapper.className = 'primary-card-wrapper';
         wrapper.dataset.id = journey.id;
 
-        const title = journey.province && journey.province !== journey.city
+        const title = journey.title ? esc(journey.title) : (journey.province && journey.province !== journey.city
             ? esc(journey.province) + ' · ' + esc(journey.city)
-            : esc(journey.province || journey.city);
+            : esc(journey.province || journey.city));
         const subcards = getSubcards(journey);
         const spots = primarySpotsHtml(subcards);
         const emojiLabel = esc(journey.city || '') + '封面';
@@ -1171,9 +1173,9 @@
 
     function updatePrimaryCard(wrapper, journey) {
         const subcards = getSubcards(journey);
-        const title = journey.province && journey.province !== journey.city
+        const title = journey.title ? esc(journey.title) : (journey.province && journey.province !== journey.city
             ? esc(journey.province) + ' · ' + esc(journey.city)
-            : esc(journey.province || journey.city);
+            : esc(journey.province || journey.city));
         const spots = primarySpotsHtml(subcards);
 
         wrapper.querySelector('.primary-title').innerHTML = title;

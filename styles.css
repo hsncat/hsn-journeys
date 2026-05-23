@@ -1425,6 +1425,11 @@ a, button, .journey-card, .primary-card, .city-card, .mini-card, .wishlist-card,
     resize: vertical;
 }
 
+.sub-itinerary-date {
+    min-height: 44px;
+    resize: none;
+}
+
 .sub-itinerary-frame {
     position: relative;
     min-height: 100%;

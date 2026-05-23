@@ -11,6 +11,7 @@
 
     let currentJourney = null;
     let editPhotoDataUrl = '';
+    let subcardPhotoDataUrl = '';
 
     document.addEventListener('DOMContentLoaded', function () {
         const params = new URLSearchParams(window.location.search);
@@ -202,21 +203,25 @@
                 highlights: highlightsFromSubcardTable(sub.itineraryTable, sub.highlights),
                 cost: numericCost(sub.cost),
                 story: sub.story || journey.story || '',
+                photo: sub.photo || journey.photo || '',
                 subCards: subcards,
             });
             return journey;
         }
         const dates = subcards.map(function (s) { return s.date; }).filter(Boolean).sort();
         const endDates = subcards.map(function (s) { return s.endDate || s.date; }).filter(Boolean).sort();
+        const names = unique(subcards.map(function (s) { return s.name || s.city; }));
         journey.province = unique(subcards.map(function (s) { return s.province; })).join(' · ') || journey.province;
         journey.city = unique(subcards.map(function (s) { return s.city; })).join(' · ') || journey.city;
         journey.country = unique(subcards.map(function (s) { return s.country; })).join(' · ') || journey.country;
+        journey.title = names.join(' · ') || journey.title;
         journey.date = dates[0] || journey.date;
         journey.endDate = endDates[endDates.length - 1] || journey.endDate;
         journey.highlights = unique([].concat.apply([], subcards.map(function (sub) {
             return highlightsFromSubcardTable(sub.itineraryTable, sub.highlights);
         }))).slice(0, 8);
         journey.cost = sumSubcardCosts(subcards);
+        journey.photo = subcards.map(function (s) { return s.photo; }).filter(Boolean)[0] || journey.photo || '';
         journey.subCards = subcards;
         return journey;
     }
@@ -459,6 +464,7 @@
             return;
         }
 
+        subcardPhotoDataUrl = subcard.photo || '';
         const cost = numericCost(subcard.cost);
         const regionType = subcard.country && subcard.country !== '中国' ? 'international' : 'domestic';
         const parentOptions = buildParentOptions(id);
@@ -494,15 +500,26 @@
             +     '<div id="subcard-itinerary-editor"></div>'
             +   '</section>'
             +   '<section class="form-section">'
-            +     '<h2 class="form-section__title">这段旅程的故事</h2>'
-            +     '<textarea id="sub-edit-story" class="journey-story-textarea" rows="5">' + esc(subcard.story || '') + '</textarea>'
+            +     '<h2 class="form-section__title">照片</h2>'
+            +     '<div class="photo-input">'
+            +       '<label for="sub-edit-photo-input" class="photo-input__drop' + (subcardPhotoDataUrl ? ' is-hidden' : '') + '" id="sub-edit-photo-label">'
+            +         '<span class="photo-input__icon" aria-hidden="true">' + Icons.svg('camera', { size: 28 }) + '</span>'
+            +         '<span class="photo-input__text">点击或拖拽上传照片</span>'
+            +         '<span class="photo-input__hint">JPG / PNG · 自动压缩至 1600px，保存到 data/journeys.json</span>'
+            +       '</label>'
+            +       '<input type="file" id="sub-edit-photo-input" accept="image/*" hidden>'
+            +     '</div>'
+            +     '<div class="photo-preview' + (subcardPhotoDataUrl ? '' : ' is-hidden') + '" id="sub-edit-photo-preview">'
+            +       '<img id="sub-edit-photo-img" src="' + esc(subcardPhotoDataUrl) + '" alt="行程照片">'
+            +       '<button type="button" class="icon-btn icon-btn--sm photo-preview__remove" id="sub-edit-photo-remove" aria-label="移除照片">' + Icons.svg('x', { size: 16 }) + '</button>'
+            +     '</div>'
             +   '</section>'
             + '</form>';
 
         renderSubcardActions(journey.id, index);
         renderSubcardItineraryEditor(tableForSubcard(subcard));
         wireSubcardEditForm(journey.id, index);
-        wireAutoResizeTextareas(editEl);
+        wireSubcardPhotoInput();
         document.getElementById('main').setAttribute('data-mode', 'edit');
         document.body.classList.add('is-editing');
         document.getElementById('detail-view').hidden = true;
@@ -533,7 +550,7 @@
     function buildParentOptions(currentId) {
         const list = (typeof journeys !== 'undefined' ? journeys : []);
         return '<option value="new">新建一级卡片</option>' + list.map(function (j) {
-            const label = j.province && j.province !== j.city ? j.province + ' · ' + j.city : (j.province || j.city || j.title || '未命名');
+            const label = j.title || (j.province && j.province !== j.city ? j.province + ' · ' + j.city : (j.province || j.city || '未命名'));
             return '<option value="' + j.id + '"' + (String(j.id) === String(currentId) ? ' selected' : '') + '>' + esc(label) + '</option>';
         }).join('');
     }
@@ -606,7 +623,11 @@
                     + '<button type="button" class="itinerary-action-btn itinerary-action-btn--danger" data-action="delete-sub-row" aria-label="删除该行">' + Icons.svg('trash2', { size: 12 }) + '</button>'
                 + '</span>'
                 : '';
-            cells.push('<td><div class="sub-itinerary-frame"><textarea class="sub-itinerary-cell" rows="2">' + esc(row && row[i] || '') + '</textarea>' + actions + '</div></td>');
+            const isDate = i === 0;
+            const control = isDate
+                ? '<input type="date" class="sub-itinerary-cell sub-itinerary-date" value="' + esc(row && row[i] || '') + '">'
+                : '<textarea class="sub-itinerary-cell" rows="2">' + esc(row && row[i] || '') + '</textarea>';
+            cells.push('<td><div class="sub-itinerary-frame">' + control + actions + '</div></td>');
         }
         return '<tr>' + cells.join('') + '</tr>';
     }
@@ -642,6 +663,61 @@
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             saveSubcardEdit(id, index);
+        });
+    }
+
+    function wireSubcardPhotoInput() {
+        const input = document.getElementById('sub-edit-photo-input');
+        const label = document.getElementById('sub-edit-photo-label');
+        const preview = document.getElementById('sub-edit-photo-preview');
+        const img = document.getElementById('sub-edit-photo-img');
+        const remove = document.getElementById('sub-edit-photo-remove');
+        if (!input || !label || !preview || !img || !remove) return;
+
+        function setPhoto(dataUrl) {
+            subcardPhotoDataUrl = dataUrl;
+            img.src = dataUrl;
+            preview.classList.remove('is-hidden');
+            label.classList.add('is-hidden');
+        }
+
+        function clearPhoto() {
+            subcardPhotoDataUrl = '';
+            input.value = '';
+            img.src = '';
+            preview.classList.add('is-hidden');
+            label.classList.remove('is-hidden');
+        }
+
+        function handleFile(file) {
+            if (!file) return;
+            if (!/^image\//.test(file.type)) {
+                HsnUI.toast('请选择图片文件', 'error');
+                return;
+            }
+            HsnUI.compressImage(file, { maxW: 1600, quality: 0.8 })
+                .then(setPhoto)
+                .catch(function () { HsnUI.toast('图片处理失败', 'error'); });
+        }
+
+        input.addEventListener('change', function () {
+            handleFile(input.files && input.files[0]);
+        });
+        remove.addEventListener('click', clearPhoto);
+        ['dragenter', 'dragover'].forEach(function (ev) {
+            label.addEventListener(ev, function (e) {
+                e.preventDefault();
+                label.classList.add('is-dragging');
+            });
+        });
+        ['dragleave', 'drop'].forEach(function (ev) {
+            label.addEventListener(ev, function (e) {
+                e.preventDefault();
+                label.classList.remove('is-dragging');
+            });
+        });
+        label.addEventListener('drop', function (e) {
+            handleFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
         });
     }
 
@@ -925,8 +1001,8 @@
                 shopping: readNumber('sub-edit-cost-shopping'),
                 ticket: readNumber('sub-edit-cost-ticket'),
             },
-            story: readField('sub-edit-story'),
-            photo: existing.photo || '',
+            story: '',
+            photo: subcardPhotoDataUrl || '',
         };
 
         const parent = readField('sub-edit-parent') || String(id);
