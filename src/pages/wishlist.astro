@@ -1,12 +1,15 @@
 ---
 import Layout from '@/components/Layout.astro';
 import { icon } from '@/lib/icons';
-import { listWishlist } from '@/server/db';
+import { listPacking, listWishlist } from '@/server/db';
 
 export const prerender = false;
 
 const env = Astro.locals.runtime.env;
-const wishlist = await listWishlist(env.DB);
+const [wishlist, packing] = await Promise.all([
+  listWishlist(env.DB),
+  listPacking(env.DB),
+]);
 ---
 
 <Layout title="心愿单" active="wishlist">
@@ -16,6 +19,38 @@ const wishlist = await listWishlist(env.DB);
       <h1>旅游心愿单</h1>
       <p class="sub">世界那么大 · 想去的地方还有 {wishlist.length} 个</p>
     </header>
+
+    {packing.length > 0 && (
+      <section class="packing">
+        <details open>
+          <summary>
+            <h2><span aria-hidden="true">🧳</span> 行李清单</h2>
+            <Fragment set:html={icon('chevronDown', { size: 20, className: 'chevron' })} />
+          </summary>
+          <div class="packing-table-wrap">
+            <table class="packing-table">
+              <thead>
+                <tr>
+                  <th>项目</th>
+                  <th>备注</th>
+                </tr>
+              </thead>
+              <tbody>
+                {packing.map(p => (
+                  <tr>
+                    <td>
+                      {p.item}
+                      {p.is_overseas_only === 1 && <span class="badge-overseas">出国</span>}
+                    </td>
+                    <td>{p.note ?? ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+    )}
 
     {wishlist.length === 0 ? (
       <div class="empty">
@@ -74,6 +109,73 @@ const wishlist = await listWishlist(env.DB);
     color: var(--color-text-muted);
     font-size: 15px;
     margin: 8px 0 0;
+  }
+
+  .packing {
+    margin: 0 0 32px;
+  }
+  .packing details {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .packing summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+  }
+  .packing summary::-webkit-details-marker { display: none; }
+  .packing summary h2 {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 28px;
+    margin: 0;
+  }
+  .packing summary :global(.chevron) {
+    color: var(--color-text-muted);
+    transition: transform 200ms var(--ease-out);
+  }
+  .packing details[open] summary :global(.chevron) { transform: rotate(180deg); }
+  .packing-table-wrap {
+    padding: 0 24px 20px;
+    overflow-x: auto;
+  }
+  .packing-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .packing-table th {
+    text-align: left;
+    padding: 12px 16px;
+    color: var(--color-text-muted);
+    font-weight: 500;
+    background: var(--color-surface-alt);
+    border-radius: 8px;
+  }
+  .packing-table th:first-child { width: 32%; }
+  .packing-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: top;
+    line-height: 1.6;
+  }
+  .packing-table tr:last-child td { border-bottom: 0; }
+  .badge-overseas {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 2px 8px;
+    background: var(--color-warning-soft);
+    color: var(--color-warning);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
   }
 
   .grid {

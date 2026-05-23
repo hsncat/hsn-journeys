@@ -9,7 +9,7 @@ import { toast } from '../components/Toast';
 import ItineraryEditor from '../components/ItineraryEditor';
 import PhotoUploader from '../components/PhotoUploader';
 import CostFields from '../components/CostFields';
-import { dateRangeFromItinerary, extractHighlightsFromItinerary } from '@/lib/itinerary';
+import { dateRangeFromItinerary } from '@/lib/itinerary';
 
 interface Props { mode: 'new' | 'edit' }
 
@@ -40,7 +40,6 @@ export default function SubCardEdit({ mode }: Props) {
   const [parent, setParent] = useState<JourneyDTO | null>(null);
   const [loading, setLoading] = useState(mode === 'edit');
   const [saving, setSaving] = useState(false);
-  const [highlightsTouched, setHighlightsTouched] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -52,7 +51,6 @@ export default function SubCardEdit({ mode }: Props) {
         if (mode === 'edit' && subId) {
           const real = await getSubCardApi(decodeURIComponent(subId));
           setS(real);
-          setHighlightsTouched(false);
         } else if (mode === 'new' && p) {
           setS(prev => ({
             ...prev,
@@ -63,7 +61,6 @@ export default function SubCardEdit({ mode }: Props) {
             endDate: p.endDate,
             emoji: p.emoji ?? '📍',
           }));
-          setHighlightsTouched(false);
         }
       } catch (err) {
         toast(err instanceof Error ? err.message : '加载失败', 'error');
@@ -93,11 +90,9 @@ export default function SubCardEdit({ mode }: Props) {
 
   const updateItinerary = (itineraryTable: SubCardDTO['itineraryTable']) => {
     const range = dateRangeFromItinerary(itineraryTable);
-    const autoHighlights = extractHighlightsFromItinerary(itineraryTable);
     setS(prev => ({
       ...prev,
       itineraryTable,
-      ...(!highlightsTouched ? { highlights: autoHighlights } : {}),
       ...(range ? { date: range.date, endDate: range.endDate } : {}),
     }));
   };
@@ -219,7 +214,6 @@ export default function SubCardEdit({ mode }: Props) {
               type="text"
               value={s.highlights.join('、')}
               onChange={e => {
-                setHighlightsTouched(true);
                 update('highlights', e.target.value.split(/[、,，;；]/).map(t => t.trim()).filter(Boolean));
               }}
             />

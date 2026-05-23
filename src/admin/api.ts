@@ -45,6 +45,11 @@ export const deleteJourneyApi = (id: number) =>
   request(`/api/journeys/${id}`, { method: 'DELETE' });
 export const resyncJourneyApi = (id: number) =>
   request<{ journey: JourneyDTO }>(`/api/journeys/${id}/resync`, { method: 'POST' }).then(r => r.journey);
+export const updateFeaturedJourneysApi = (ids: number[]) =>
+  request<{ ok: boolean; featuredIds: number[] }>('/api/journeys/featured', {
+    method: 'PUT',
+    body: JSON.stringify({ ids }),
+  });
 
 // SubCards
 export const listSubCardsApi = (journeyId?: number) =>

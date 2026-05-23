@@ -16,6 +16,7 @@ export interface JourneyRow {
   highlights_json: string | null;
   cost_json: string | null;
   photo_url: string | null;
+  is_featured: number;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -127,6 +128,7 @@ export interface JourneyDTO {
   highlights: string[];
   cost: CostObject;
   photoUrl: string | null;
+  isFeatured: boolean;
   sortOrder: number;
   subCards: SubCardDTO[];
 }
@@ -217,6 +219,7 @@ export function journeyRowToDTO(row: JourneyRow, subCards: SubCardRow[]): Journe
     highlights: rowToHighlights(row),
     cost: rowToCost(row),
     photoUrl: row.photo_url,
+    isFeatured: row.is_featured === 1,
     sortOrder: row.sort_order,
     subCards: subCards.map(subCardRowToDTO),
   };

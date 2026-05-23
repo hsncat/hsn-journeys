@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  createJourneyApi, deleteSubCardApi, getJourneyApi, resyncJourneyApi, updateJourneyApi,
+  createJourneyApi, deleteSubCardApi, getJourneyApi, resyncJourneyApi,
 } from '../api';
 import type { JourneyDTO, SubCardDTO } from '@/server/db';
 import { emptyCost, emptyItinerary } from '@/server/db';
@@ -49,6 +49,7 @@ const blankJourney = (): JourneyDTO => ({
   highlights: [],
   cost: emptyCost(),
   photoUrl: null,
+  isFeatured: false,
   sortOrder: 0,
   subCards: [blankSub()],
 });
@@ -59,7 +60,6 @@ export default function JourneyEdit({ mode }: Props) {
   const id = params.id ? Number(params.id) : 0;
   const [j, setJ] = useState<JourneyDTO>(blankJourney());
   const [loading, setLoading] = useState(mode === 'edit');
-  const [saving, setSaving] = useState(false);
   const [creatingDraft, setCreatingDraft] = useState(false);
 
   useEffect(() => {
@@ -96,51 +96,6 @@ export default function JourneyEdit({ mode }: Props) {
 
   const update = <K extends keyof JourneyDTO>(key: K, value: JourneyDTO[K]) => {
     setJ(prev => ({ ...prev, [key]: value }));
-  };
-
-  const handleSave = async () => {
-    const payload = {
-      province: autoJourney.province,
-      city: autoJourney.city,
-      country: normalizeCountry(autoJourney.country),
-      date: autoJourney.date,
-      endDate: autoJourney.endDate,
-      title: autoJourney.title,
-      emoji: autoJourney.emoji,
-      description: null,
-      story: autoJourney.story,
-      highlights: autoJourney.highlights,
-      cost: autoJourney.cost,
-      photoUrl: autoJourney.photoUrl,
-      subCards: mode === 'new' ? autoJourney.subCards.map(sub => ({
-        ...sub,
-        name: sub.city || autoJourney.title || '子卡片',
-        country: sub.country || '中国',
-      })) : undefined,
-    };
-
-    if (!payload.province || !payload.city || !payload.country || !payload.date || !payload.endDate || !payload.title) {
-      toast('请先在子卡片里填写省份、城市和日期', 'error');
-      return;
-    }
-
-    setSaving(true);
-    try {
-      if (mode === 'new') {
-        const created = await createJourneyApi(payload);
-        toast('已创建', 'success');
-        navigate(`/journeys/${created.id}`);
-      } else {
-        await updateJourneyApi(id, payload);
-        toast('已保存', 'success');
-        const fresh = await getJourneyApi(id);
-        setJ(fresh);
-      }
-    } catch (err) {
-      toast(err instanceof Error ? err.message : '保存失败', 'error');
-    } finally {
-      setSaving(false);
-    }
   };
 
   const createDraftJourney = async (target: 'journey' | 'template' | 'new-sub') => {
@@ -190,11 +145,10 @@ export default function JourneyEdit({ mode }: Props) {
   };
 
   const handleResync = async () => {
-    if (!confirm('从所有子卡片重新聚合一级卡片的字段（日期/费用/亮点等）？')) return;
     try {
       const fresh = await resyncJourneyApi(id);
       setJ(fresh);
-      toast('已重新聚合', 'success');
+      toast('已从子卡片聚合并保存', 'success');
     } catch (err) {
       toast(err instanceof Error ? err.message : '操作失败', 'error');
     }
@@ -227,13 +181,15 @@ export default function JourneyEdit({ mode }: Props) {
           {mode === 'edit' && (
             <a href={`/detail/${id}`} target="_blank" rel="noopener" className="btn btn-ghost">预览</a>
           )}
-          <button
-            className="btn btn-primary"
-            onClick={mode === 'new' ? () => createDraftJourney('journey') : handleSave}
-            disabled={saving || creatingDraft}
-          >
-            {saving || creatingDraft ? '保存中…' : '保存'}
-          </button>
+          {mode === 'new' && (
+            <button
+              className="btn btn-primary"
+              onClick={() => createDraftJourney('journey')}
+              disabled={creatingDraft}
+            >
+              {creatingDraft ? '保存中…' : '保存'}
+            </button>
+          )}
         </div>
       </div>
 

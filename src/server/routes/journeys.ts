@@ -140,6 +140,31 @@ journeys.post('/', requireAdmin, async (c) => {
   return c.json({ journey: created }, 201);
 });
 
+// --- 管理员：设置首页精彩旅程 ---
+journeys.put('/featured', requireAdmin, async (c) => {
+  let body: { ids?: unknown };
+  try { body = await c.req.json(); } catch { return c.json({ error: 'invalid_body' }, 400); }
+
+  if (!Array.isArray(body.ids)) return c.json({ error: 'invalid_ids' }, 400);
+  const featuredIds = [...new Set(
+    body.ids
+      .map(id => Number(id))
+      .filter(id => Number.isInteger(id) && id > 0)
+  )];
+  const featured = new Set(featuredIds);
+  const rows = await c.env.DB.prepare('SELECT id FROM journeys').all<{ id: number }>();
+  const updates = (rows.results ?? []).map(row => (
+    c.env.DB.prepare(
+      `UPDATE journeys
+       SET is_featured = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    ).bind(featured.has(row.id) ? 1 : 0, row.id)
+  ));
+
+  if (updates.length) await c.env.DB.batch(updates);
+  return c.json({ ok: true, featuredIds });
+});
+
 // --- 管理员：更新 ---
 journeys.put('/:id', requireAdmin, async (c) => {
   const id = Number(c.req.param('id'));

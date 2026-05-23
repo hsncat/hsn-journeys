@@ -1,16 +1,15 @@
 ---
 import Layout from '@/components/Layout.astro';
 import { icon } from '@/lib/icons';
-import { listJourneys, listPacking, getSiteSettings } from '@/server/db';
-import { fmtDate, fmtDateRange, daysBetween } from '@/lib/format';
+import { listJourneys, getSiteSettings } from '@/server/db';
+import { fmtDateRange, daysBetween } from '@/lib/format';
 import { isDomestic } from '@/lib/locations';
 
 export const prerender = false;
 
 const env = Astro.locals.runtime.env;
-const [journeys, packing, settings] = await Promise.all([
+const [journeys, settings] = await Promise.all([
   listJourneys(env.DB),
-  listPacking(env.DB),
   getSiteSettings(env.DB),
 ]);
 
@@ -25,7 +24,8 @@ const cityCount = new Set(
 const journeyCount = journeys.length;
 const photoCount = journeys.filter(j => !!j.photoUrl).length || journeys.reduce((n, j) => n + j.highlights.length, 0);
 
-const recent = [...journeys]
+const featured = journeys
+  .filter(j => j.isFeatured)
   .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
   .slice(0, 3);
 
@@ -71,17 +71,17 @@ const heroSub = settings.hero_subtitle || '记录美好生活';
       </div>
     </section>
 
-    <!-- Recent journeys -->
+    <!-- Featured journeys -->
     <section class="recent">
       <header class="section-header">
-        <h2>最近旅程</h2>
+        <h2>精彩旅程</h2>
         <a href="/cities" class="section-more">
           <span>查看全部</span>
           <Fragment set:html={icon('arrowRight', { size: 16 })} />
         </a>
       </header>
       <div class="recent-grid">
-        {recent.map(j => (
+        {featured.map(j => (
           <a href={`/detail/${j.id}`} class="journey-card">
             <div class="journey-card__cover">
               {j.photoUrl ? (
@@ -124,39 +124,6 @@ const heroSub = settings.hero_subtitle || '记录美好生活';
         ))}
       </div>
     </section>
-
-    <!-- Packing list -->
-    {packing.length > 0 && (
-      <section class="packing">
-        <details>
-          <summary>
-            <h2><span aria-hidden="true">🧳</span> 行李清单</h2>
-            <Fragment set:html={icon('chevronDown', { size: 20, className: 'chevron' })} />
-          </summary>
-          <div class="packing-table-wrap">
-            <table class="packing-table">
-              <thead>
-                <tr>
-                  <th>项目</th>
-                  <th>备注</th>
-                </tr>
-              </thead>
-              <tbody>
-                {packing.map(p => (
-                  <tr>
-                    <td>
-                      {p.item}
-                      {p.is_overseas_only === 1 && <span class="badge-overseas">出国</span>}
-                    </td>
-                    <td>{p.note ?? ''}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
-      </section>
-    )}
   </main>
 </Layout>
 
@@ -371,16 +338,20 @@ const heroSub = settings.hero_subtitle || '记录美好生活';
     line-height: 1.2;
   }
   .journey-card__meta {
-    display: flex;
-    gap: 14px;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.35fr) auto;
+    gap: 10px;
     color: var(--color-text-muted);
-    font-size: 13px;
+    font-size: 12px;
   }
   .journey-card__meta span {
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .highlight-lines {
     display: grid;
@@ -397,73 +368,5 @@ const heroSub = settings.hero_subtitle || '记录美好生活';
     grid-template-columns: auto 1fr;
     gap: 6px;
     align-items: start;
-  }
-
-  /* Packing */
-  .packing {
-    margin: 64px 0 32px;
-  }
-  .packing details {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: 16px;
-    overflow: hidden;
-  }
-  .packing summary {
-    list-style: none;
-    cursor: pointer;
-    padding: 20px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    user-select: none;
-  }
-  .packing summary::-webkit-details-marker { display: none; }
-  .packing summary h2 {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 28px;
-    margin: 0;
-  }
-  .packing summary :global(.chevron) {
-    color: var(--color-text-muted);
-    transition: transform 200ms var(--ease-out);
-  }
-  .packing details[open] summary :global(.chevron) { transform: rotate(180deg); }
-  .packing-table-wrap {
-    padding: 0 24px 20px;
-    overflow-x: auto;
-  }
-  .packing-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-  }
-  .packing-table th {
-    text-align: left;
-    padding: 12px 16px;
-    color: var(--color-text-muted);
-    font-weight: 500;
-    background: var(--color-surface-alt);
-    border-radius: 8px;
-  }
-  .packing-table th:first-child { width: 32%; }
-  .packing-table td {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--color-border);
-    vertical-align: top;
-    line-height: 1.6;
-  }
-  .packing-table tr:last-child td { border-bottom: 0; }
-  .badge-overseas {
-    display: inline-block;
-    margin-left: 6px;
-    padding: 2px 8px;
-    background: var(--color-warning-soft);
-    color: var(--color-warning);
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 600;
   }
 </style>
