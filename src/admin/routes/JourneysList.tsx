@@ -88,7 +88,6 @@ export default function JourneysList() {
                     <Link to={`/journeys/${j.id}`} style={{ color: 'inherit', textDecoration: 'none', fontWeight: 600 }}>
                       {j.title}
                     </Link>
-                    <div style={{ fontSize: 11, color: 'var(--color-text-subtle)', marginTop: 2 }}>#{j.id}</div>
                   </td>
                   <td style={{ fontSize: 13, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
                     {j.date} ~ {j.endDate}

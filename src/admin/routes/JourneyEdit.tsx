@@ -88,7 +88,8 @@ export default function JourneyEdit({ mode }: Props) {
     return {
       ...base,
       ...aggregated,
-      country: normalizeCountry(base.country),
+      country: normalizeCountry(aggregated.country),
+      highlights: j.highlights.length ? j.highlights : (aggregated.highlights ?? []),
       title: aggregated.title || buildJourneyTitle(aggregated.province, aggregated.city),
     } as JourneyDTO;
   }, [j]);
@@ -257,10 +258,7 @@ export default function JourneyEdit({ mode }: Props) {
           </div>
           <div className="field">
             <label>国家</label>
-            <select value={normalizeCountry(j.country)} onChange={e => update('country', e.target.value)}>
-              <option value="国内">国内</option>
-              <option value="国外">国外</option>
-            </select>
+            <input type="text" value={autoJourney.country} readOnly />
           </div>
           <div className="field">
             <label>开始日期</label>
@@ -274,11 +272,11 @@ export default function JourneyEdit({ mode }: Props) {
         <div className="form-grid full">
           <div className="field">
             <label>景点亮点</label>
-            <textarea value={autoJourney.highlights.join('\n')} readOnly rows={Math.max(3, autoJourney.highlights.length)} />
-          </div>
-          <div className="field">
-            <label>旅行故事</label>
-            <textarea value={autoJourney.story ?? ''} onChange={e => update('story', e.target.value || null)} rows={6} />
+            <textarea
+              value={autoJourney.highlights.join('\n')}
+              onChange={e => update('highlights', e.target.value.split(/\n+/).map(s => s.trim()).filter(Boolean))}
+              rows={Math.max(3, autoJourney.highlights.length)}
+            />
           </div>
         </div>
       </div>
@@ -291,6 +289,13 @@ export default function JourneyEdit({ mode }: Props) {
       <div className="admin-card">
         <h2>封面照片</h2>
         <PhotoUploader value={autoJourney.photoUrl} onChange={key => update('photoUrl', key)} folder={`journeys/${id || 'new'}`} />
+      </div>
+
+      <div className="admin-card">
+        <h2>旅行故事</h2>
+        <div className="field">
+          <textarea value={autoJourney.story ?? ''} onChange={e => update('story', e.target.value || null)} rows={6} />
+        </div>
       </div>
 
       {mode === 'new' && (
@@ -328,7 +333,6 @@ export default function JourneyEdit({ mode }: Props) {
                   >
                     子卡片模板
                   </button>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-subtle)' }}>保存草稿后进入编辑</div>
                 </td>
                 <td style={{ fontSize: 13, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
                   待编辑
@@ -392,7 +396,6 @@ export default function JourneyEdit({ mode }: Props) {
                       <Link to={`/journeys/${id}/sub/${encodeURIComponent(s.id)}`} style={{ color: 'inherit', textDecoration: 'none', fontWeight: 600 }}>
                         {s.name}
                       </Link>
-                      <div style={{ fontSize: 11, color: 'var(--color-text-subtle)' }}>{s.id}</div>
                     </td>
                     <td style={{ fontSize: 13, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
                       {s.date}{s.endDate && s.endDate !== s.date ? ` ~ ${s.endDate}` : ''}

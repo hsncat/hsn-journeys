@@ -9,7 +9,7 @@ import { toast } from '../components/Toast';
 import ItineraryEditor from '../components/ItineraryEditor';
 import PhotoUploader from '../components/PhotoUploader';
 import CostFields from '../components/CostFields';
-import { dateRangeFromItinerary } from '@/lib/itinerary';
+import { dateRangeFromItinerary, extractHighlightsFromItinerary } from '@/lib/itinerary';
 
 interface Props { mode: 'new' | 'edit' }
 
@@ -40,6 +40,7 @@ export default function SubCardEdit({ mode }: Props) {
   const [parent, setParent] = useState<JourneyDTO | null>(null);
   const [loading, setLoading] = useState(mode === 'edit');
   const [saving, setSaving] = useState(false);
+  const [highlightsTouched, setHighlightsTouched] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -51,6 +52,7 @@ export default function SubCardEdit({ mode }: Props) {
         if (mode === 'edit' && subId) {
           const real = await getSubCardApi(decodeURIComponent(subId));
           setS(real);
+          setHighlightsTouched(false);
         } else if (mode === 'new' && p) {
           setS(prev => ({
             ...prev,
@@ -61,6 +63,7 @@ export default function SubCardEdit({ mode }: Props) {
             endDate: p.endDate,
             emoji: p.emoji ?? '📍',
           }));
+          setHighlightsTouched(false);
         }
       } catch (err) {
         toast(err instanceof Error ? err.message : '加载失败', 'error');
@@ -90,9 +93,11 @@ export default function SubCardEdit({ mode }: Props) {
 
   const updateItinerary = (itineraryTable: SubCardDTO['itineraryTable']) => {
     const range = dateRangeFromItinerary(itineraryTable);
+    const autoHighlights = extractHighlightsFromItinerary(itineraryTable);
     setS(prev => ({
       ...prev,
       itineraryTable,
+      ...(!highlightsTouched ? { highlights: autoHighlights } : {}),
       ...(range ? { date: range.date, endDate: range.endDate } : {}),
     }));
   };
@@ -212,12 +217,11 @@ export default function SubCardEdit({ mode }: Props) {
             <input
               type="text"
               value={s.highlights.join('、')}
-              onChange={e => update('highlights', e.target.value.split(/[、,，;；]/).map(t => t.trim()).filter(Boolean))}
+              onChange={e => {
+                setHighlightsTouched(true);
+                update('highlights', e.target.value.split(/[、,，;；]/).map(t => t.trim()).filter(Boolean));
+              }}
             />
-          </div>
-          <div className="field">
-            <label>故事</label>
-            <textarea value={s.story ?? ''} onChange={e => update('story', e.target.value || null)} rows={4} />
           </div>
         </div>
       </div>
@@ -235,6 +239,13 @@ export default function SubCardEdit({ mode }: Props) {
       <div className="admin-card">
         <h2>照片</h2>
         <PhotoUploader value={s.photoUrl} onChange={key => update('photoUrl', key)} folder={`sub-cards/${s.id || 'new'}`} />
+      </div>
+
+      <div className="admin-card">
+        <h2>旅行故事</h2>
+        <div className="field">
+          <textarea value={s.story ?? ''} onChange={e => update('story', e.target.value || null)} rows={6} />
+        </div>
       </div>
     </div>
   );

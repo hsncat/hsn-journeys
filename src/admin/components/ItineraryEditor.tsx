@@ -17,6 +17,7 @@ interface FloatingControl {
 export default function ItineraryEditor({ value, onChange }: Props) {
   const headers = value.headers.length ? value.headers : ['日期', '上午', '下午', '备注'];
   const rows = value.rows;
+  const visibleRows = rows.length ? rows : [headers.map(() => '')];
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [control, setControl] = useState<FloatingControl | null>(null);
 
@@ -132,14 +133,7 @@ export default function ItineraryEditor({ value, onChange }: Props) {
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={headers.length} style={{ textAlign: 'center', color: 'var(--color-text-subtle)', padding: 16 }}>
-                  还没有行程，点击下方"添加一天"开始
-                </td>
-              </tr>
-            )}
-            {rows.map((row, ri) => (
+            {visibleRows.map((row, ri) => (
               <tr key={ri} onMouseEnter={e => showRowControls(ri, e.currentTarget)}>
                 {headers.map((_, ci) => {
                   const isDate = ci === 0 || headers[ci] === '日期';
@@ -194,11 +188,7 @@ export default function ItineraryEditor({ value, onChange }: Props) {
               -
             </button>
           </div>
-        )}
-      </div>
-      <div className="itinerary-toolbar">
-        <button type="button" onClick={() => addRow()}>+ 添加一天</button>
-        <button type="button" onClick={() => addCol()}>+ 添加列</button>
+          )}
       </div>
     </div>
   );

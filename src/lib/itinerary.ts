@@ -129,7 +129,11 @@ export function aggregateFromSubCards(subCards: SubCardDTO[], existing: Partial<
   const city = cities.length > 1 ? cities.join('&') : (cities[0] || existing.city || '');
   const title = buildJourneyTitle(province, city);
   const highlightsBySubCard = sorted
-    .map(s => (s.highlights || []).map(h => h.trim()).filter(Boolean).join('、'))
+    .map(s => {
+      const explicit = (s.highlights || []).map(h => h.trim()).filter(Boolean);
+      const fallback = explicit.length ? explicit : extractHighlightsFromItinerary(s.itineraryTable);
+      return fallback.join('、');
+    })
     .filter(Boolean);
 
   if (subCards.length === 1) {
@@ -138,7 +142,7 @@ export function aggregateFromSubCards(subCards: SubCardDTO[], existing: Partial<
       ...existing,
       province,
       city,
-      country: existing.country || countryTypeFromSubCards(subCards, existing.country),
+      country: countryTypeFromSubCards(subCards, existing.country),
       date: s.date ?? existing.date ?? '',
       endDate: s.endDate ?? existing.endDate ?? '',
       title: title || existing.title || '',
@@ -154,7 +158,7 @@ export function aggregateFromSubCards(subCards: SubCardDTO[], existing: Partial<
     ...existing,
     province,
     city,
-    country: existing.country || countryTypeFromSubCards(subCards, existing.country),
+    country: countryTypeFromSubCards(subCards, existing.country),
     date: firstDate,
     endDate: lastEnd,
     title: title || existing.title || '',

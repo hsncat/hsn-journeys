@@ -506,24 +506,6 @@
   opacity: 0.35;
   cursor: not-allowed;
 }
-.itinerary-toolbar {
-  display: flex;
-  gap: 6px;
-  padding: 8px 0 0;
-  background: var(--color-bg);
-}
-.itinerary-toolbar button {
-  border: 0;
-  padding: 4px 10px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: 12px;
-  cursor: pointer;
-}
-.itinerary-toolbar button:hover { background: var(--color-surface-alt); }
-.itinerary-toolbar button.danger { color: var(--color-danger); }
-
 /* ----- Photo uploader ----- */
 .photo-uploader {
   border: 2px dashed var(--color-border-strong);
