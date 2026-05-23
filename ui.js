@@ -428,20 +428,12 @@
     // ------------------------------------------------------------------
 
     function boot() {
-        var page = currentPage();
+        const page = currentPage();
         document.body.setAttribute('data-page', page);
         ensureToastContainer();
         mountTopNav();
         mountTabbar();
         injectSkipLink();
-
-        window.addEventListener('journeys-persist', function (e) {
-            if (e.detail && e.detail.ok) {
-                toast('已保存到 data/journeys.json', 'success');
-            } else {
-                toast('未连接到本地服务器，数据未持久化到文件', 'error');
-            }
-        });
     }
 
     function injectSkipLink() {

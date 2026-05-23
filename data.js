@@ -517,6 +517,14 @@ function loadJourneys() {
     const fileData = loadJourneysFromJsonFile();
     if (fileData) return fileData;
 
+    try {
+        const saved = localStorage.getItem('hsn-journeys');
+        if (saved) {
+            return JSON.parse(saved);
+        }
+    } catch (e) {
+        console.error('Failed to load journeys from localStorage:', e);
+    }
     return JSON.parse(JSON.stringify(defaultJourneys));
 }
 
@@ -536,14 +544,18 @@ function loadJourneysFromJsonFile() {
 }
 
 function saveJourneys(data) {
-    persistJourneysToJsonFile(data);
+    try {
+        localStorage.setItem('hsn-journeys', JSON.stringify(data));
+        persistJourneysToJsonFile(data);
+        return true;
+    } catch (e) {
+        console.error('Failed to save journeys to localStorage:', e);
+        return false;
+    }
 }
 
 function persistJourneysToJsonFile(data) {
-    if (!window.fetch) {
-        window.dispatchEvent(new CustomEvent('journeys-persist', { detail: { ok: false, reason: 'no-fetch' } }));
-        return;
-    }
+    if (!window.fetch) return;
     fetch('/api/journeys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -554,11 +566,9 @@ function persistJourneysToJsonFile(data) {
     }).then(function (result) {
         if (result && result.ok) {
             console.info('Saved journeys to data/journeys.json');
-            window.dispatchEvent(new CustomEvent('journeys-persist', { detail: { ok: true } }));
         }
     }).catch(function () {
         console.info('Local JSON save API is unavailable; data was kept in browser storage only.');
-        window.dispatchEvent(new CustomEvent('journeys-persist', { detail: { ok: false, reason: 'api-unavailable' } }));
     });
 }
 
