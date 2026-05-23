@@ -108,6 +108,18 @@
   font: inherit;
 }
 .link-btn:hover { color: var(--color-text-inverse); }
+.table-link {
+  color: var(--color-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+.table-link:hover {
+  color: var(--color-accent);
+}
+.table-link:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
 
 .view-site, .logout-btn {
   padding: 8px 12px;

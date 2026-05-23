@@ -7,12 +7,10 @@ import type { JourneyDTO, SubCardDTO } from '@/server/db';
 import { emptyCost, emptyItinerary } from '@/server/db';
 import { toast } from '../components/Toast';
 import PhotoUploader from '../components/PhotoUploader';
-import ItineraryEditor from '../components/ItineraryEditor';
 import CostFields from '../components/CostFields';
 import {
   aggregateFromSubCards,
   buildJourneyTitle,
-  dateRangeFromItinerary,
   formatMoney,
   totalCost,
 } from '@/lib/itinerary';
@@ -62,6 +60,7 @@ export default function JourneyEdit({ mode }: Props) {
   const [j, setJ] = useState<JourneyDTO>(blankJourney());
   const [loading, setLoading] = useState(mode === 'edit');
   const [saving, setSaving] = useState(false);
+  const [creatingDraft, setCreatingDraft] = useState(false);
 
   useEffect(() => {
     if (mode === 'edit') {
@@ -96,28 +95,6 @@ export default function JourneyEdit({ mode }: Props) {
 
   const update = <K extends keyof JourneyDTO>(key: K, value: JourneyDTO[K]) => {
     setJ(prev => ({ ...prev, [key]: value }));
-  };
-
-  const updateNewSub = (index: number, patch: Partial<SubCardDTO>) => {
-    setJ(prev => {
-      const subCards = prev.subCards.map((sub, i) => i === index ? { ...sub, ...patch } : sub);
-      const aggregated = aggregateFromSubCards(subCards, { ...prev, country: normalizeCountry(prev.country) });
-      return {
-        ...prev,
-        ...aggregated,
-        country: normalizeCountry(prev.country),
-        title: aggregated.title || buildJourneyTitle(aggregated.province, aggregated.city),
-        subCards,
-      } as JourneyDTO;
-    });
-  };
-
-  const updateNewSubItinerary = (index: number, itineraryTable: SubCardDTO['itineraryTable']) => {
-    const range = dateRangeFromItinerary(itineraryTable);
-    updateNewSub(index, {
-      itineraryTable,
-      ...(range ? { date: range.date, endDate: range.endDate } : {}),
-    });
   };
 
   const handleSave = async () => {
@@ -165,6 +142,52 @@ export default function JourneyEdit({ mode }: Props) {
     }
   };
 
+  const createDraftJourney = async (target: 'journey' | 'template' | 'new-sub') => {
+    if (mode !== 'new') return;
+    setCreatingDraft(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const draft = {
+        province: autoJourney.province || '待填写',
+        city: autoJourney.city || '待填写',
+        country: normalizeCountry(autoJourney.country),
+        date: autoJourney.date || today,
+        endDate: autoJourney.endDate || today,
+        title: autoJourney.title || '待填写',
+        emoji: autoJourney.emoji,
+        description: null,
+        story: autoJourney.story,
+        highlights: autoJourney.highlights,
+        cost: autoJourney.cost,
+        photoUrl: autoJourney.photoUrl,
+        subCards: [{
+          ...blankSub(),
+          name: '子卡片模板',
+          emoji: autoJourney.emoji,
+          province: '',
+          city: '',
+          country: '中国',
+          date: today,
+          endDate: today,
+        }],
+      };
+      const created = await createJourneyApi(draft);
+      const firstSubId = created.subCards[0]?.id;
+      toast('已创建草稿', 'success');
+      if (target === 'template' && firstSubId) {
+        navigate(`/journeys/${created.id}/sub/${encodeURIComponent(firstSubId)}`);
+      } else if (target === 'new-sub') {
+        navigate(`/journeys/${created.id}/sub/new`);
+      } else {
+        navigate(`/journeys/${created.id}`);
+      }
+    } catch (err) {
+      toast(err instanceof Error ? err.message : '创建草稿失败', 'error');
+    } finally {
+      setCreatingDraft(false);
+    }
+  };
+
   const handleResync = async () => {
     if (!confirm('从所有子卡片重新聚合一级卡片的字段（日期/费用/亮点等）？')) return;
     try {
@@ -203,8 +226,12 @@ export default function JourneyEdit({ mode }: Props) {
           {mode === 'edit' && (
             <a href={`/detail/${id}`} target="_blank" rel="noopener" className="btn btn-ghost">预览</a>
           )}
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? '保存中…' : '保存'}
+          <button
+            className="btn btn-primary"
+            onClick={mode === 'new' ? () => createDraftJourney('journey') : handleSave}
+            disabled={saving || creatingDraft}
+          >
+            {saving || creatingDraft ? '保存中…' : '保存'}
           </button>
         </div>
       </div>
@@ -268,57 +295,69 @@ export default function JourneyEdit({ mode }: Props) {
 
       {mode === 'new' && (
         <div className="admin-card">
-          <h2>子卡片</h2>
-          {j.subCards.map((sub, index) => (
-            <div className="subcard-template" key={sub.id}>
-              <div className="form-grid">
-                <div className="field">
-                  <label>Emoji</label>
-                  <input type="text" value={sub.emoji ?? ''} maxLength={4} onChange={e => updateNewSub(index, { emoji: e.target.value })} />
-                </div>
-                <div className="field">
-                  <label>省份</label>
-                  <input type="text" value={sub.province ?? ''} onChange={e => updateNewSub(index, { province: e.target.value || null })} />
-                </div>
-                <div className="field">
-                  <label>城市</label>
-                  <input type="text" value={sub.city ?? ''} onChange={e => updateNewSub(index, { city: e.target.value || null })} />
-                </div>
-                <div className="field">
-                  <label>国家</label>
-                  <input type="text" value={sub.country ?? ''} onChange={e => updateNewSub(index, { country: e.target.value || null })} />
-                </div>
-                <div className="field">
-                  <label>开始日期</label>
-                  <input type="date" value={sub.date} onChange={e => updateNewSub(index, { date: e.target.value })} />
-                </div>
-                <div className="field">
-                  <label>结束日期</label>
-                  <input type="date" value={sub.endDate ?? ''} onChange={e => updateNewSub(index, { endDate: e.target.value || null })} />
-                </div>
-              </div>
-              <div className="form-grid full">
-                <div className="field">
-                  <label>景点亮点（用、或,分隔）</label>
-                  <input
-                    type="text"
-                    value={sub.highlights.join('、')}
-                    onChange={e => updateNewSub(index, {
-                      highlights: e.target.value.split(/[、,，;；]/).map(s => s.trim()).filter(Boolean),
-                    })}
-                  />
-                </div>
-                <div className="field">
-                  <label>故事</label>
-                  <textarea value={sub.story ?? ''} onChange={e => updateNewSub(index, { story: e.target.value || null })} rows={4} />
-                </div>
-              </div>
-              <h3>行程表</h3>
-              <ItineraryEditor value={sub.itineraryTable} onChange={v => updateNewSubItinerary(index, v)} />
-              <h3>费用</h3>
-              <CostFields value={sub.cost} onChange={cost => updateNewSub(index, { cost })} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <h2 style={{ margin: 0 }}>子卡片 (1)</h2>
+            <button
+              className="btn btn-accent"
+              onClick={() => createDraftJourney('new-sub')}
+              disabled={creatingDraft}
+            >
+              + 添加子卡片
+            </button>
+          </div>
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>名称</th>
+                <th>日期</th>
+                <th>亮点</th>
+                <th>费用</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ fontSize: 24, textAlign: 'center' }}>{autoJourney.emoji ?? '📍'}</td>
+                <td>
+                  <button
+                    type="button"
+                    className="link-btn table-link"
+                    onClick={() => createDraftJourney('template')}
+                    disabled={creatingDraft}
+                  >
+                    子卡片模板
+                  </button>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-subtle)' }}>保存草稿后进入编辑</div>
+                </td>
+                <td style={{ fontSize: 13, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+                  待编辑
+                </td>
+                <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                  待编辑
+                </td>
+                <td style={{ fontSize: 13, fontFeatureSettings: '"tnum"' }}>
+                  ¥{formatMoney(0)}
+                </td>
+                <td>
+                  <div className="row-actions">
+                    <button
+                      className="btn btn-sm btn-ghost"
+                      onClick={() => createDraftJourney('template')}
+                      disabled={creatingDraft}
+                    >
+                      编辑
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          {creatingDraft && (
+            <div style={{ marginTop: 10, color: 'var(--color-text-muted)', fontSize: 13 }}>
+              正在创建草稿…
             </div>
-          ))}
+          )}
         </div>
       )}
 
@@ -384,4 +423,3 @@ export default function JourneyEdit({ mode }: Props) {
 function normalizeCountry(country: string | null | undefined): string {
   return country === '国外' ? '国外' : '国内';
 }
-
