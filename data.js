@@ -514,6 +514,9 @@ function getJourneyById(id) {
 }
 
 function loadJourneys() {
+    const fileData = loadJourneysFromJsonFile();
+    if (fileData) return fileData;
+
     try {
         const saved = localStorage.getItem('hsn-journeys');
         if (saved) {
@@ -525,14 +528,48 @@ function loadJourneys() {
     return JSON.parse(JSON.stringify(defaultJourneys));
 }
 
+function loadJourneysFromJsonFile() {
+    try {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', 'data/journeys.json?v=' + Date.now(), false);
+        xhr.send(null);
+        if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+            const parsed = JSON.parse(xhr.responseText);
+            if (Array.isArray(parsed)) return parsed;
+        }
+    } catch (e) {
+        console.warn('Failed to load journeys from data/journeys.json:', e);
+    }
+    return null;
+}
+
 function saveJourneys(data) {
     try {
         localStorage.setItem('hsn-journeys', JSON.stringify(data));
+        persistJourneysToJsonFile(data);
         return true;
     } catch (e) {
         console.error('Failed to save journeys to localStorage:', e);
         return false;
     }
+}
+
+function persistJourneysToJsonFile(data) {
+    if (!window.fetch) return;
+    fetch('/api/journeys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    }).then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+    }).then(function (result) {
+        if (result && result.ok) {
+            console.info('Saved journeys to data/journeys.json');
+        }
+    }).catch(function () {
+        console.info('Local JSON save API is unavailable; data was kept in browser storage only.');
+    });
 }
 
 function addJourney(journey) {
@@ -635,11 +672,6 @@ function getLocationList() {
 let journeys = loadJourneys();
 
 // 强制重置为原始数据（仅执行一次）
-if (!localStorage.getItem('hsn-journeys-reset-v20260504')) {
-    resetJourneys();
-    localStorage.setItem('hsn-journeys-reset-v20260504', '1');
-}
-
 /* --------------------------------------------------------------------
  * Wishlist persistence (parallel to journeys)
  * ------------------------------------------------------------------ */

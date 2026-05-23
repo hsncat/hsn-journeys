@@ -1,5 +1,5 @@
 /**
- * Add page — create a new journey.
+ * Add page — create a secondary journey card using the same page form as edit.
  *
  * Depends on: data.js, icons.js, ui.js
  */
@@ -7,317 +7,270 @@
     'use strict';
 
     const Icons = window.HsnIcons;
-
-    const REQUIRED_FIELDS = [
-        { id: 'add-province', errId: 'err-province', label: '省份' },
-        { id: 'add-city',     errId: 'err-city',     label: '城市' },
-        { id: 'add-name',     errId: 'err-name',     label: '旅程名称' },
-        { id: 'add-date',     errId: 'err-date',     label: '开始日期' },
-    ];
-
-    let photoDataUrl = '';
-    let isDirty = false;
+    const esc = HsnUI.escapeHtml;
 
     document.addEventListener('DOMContentLoaded', function () {
-        injectIcons();
+        renderParentOptions();
+        renderItineraryEditor(defaultTable());
         wireForm();
-        updatePreview();
+        wireAutoResizeTextareas();
     });
 
-    // ------------------------------------------------------------------
-    // Setup
-    // ------------------------------------------------------------------
+    function defaultTable() {
+        return {
+            headers: ['日期', '上午', '下午', '备注'],
+            rows: [
+                ['', '', '', ''],
+                ['', '', '', ''],
+                ['', '', '', ''],
+            ],
+        };
+    }
 
-    function injectIcons() {
-        const photoIcon = document.querySelector('.photo-input__icon');
-        if (photoIcon) photoIcon.innerHTML = Icons.svg('camera', { size: 28 });
+    function normalizeTable(table) {
+        const fallback = defaultTable();
+        if (!table || !Array.isArray(table.headers) || !Array.isArray(table.rows)) return fallback;
+        const headers = (table.headers.length ? table.headers : fallback.headers).map(function (h, i) {
+            return h || fallback.headers[i] || ('列' + (i + 1));
+        });
+        const rows = table.rows.length ? table.rows.map(function (row) {
+            const next = Array.isArray(row) ? row.slice(0, headers.length) : [];
+            while (next.length < headers.length) next.push('');
+            return next;
+        }) : fallback.rows.map(function (row) { return row.slice(); });
+        while (rows.length < 3) rows.push(new Array(headers.length).fill(''));
+        return { headers: headers, rows: rows };
+    }
 
-        const removeBtn = document.getElementById('add-photo-remove');
-        if (removeBtn) removeBtn.innerHTML = Icons.svg('x', { size: 16 });
+    function renderParentOptions() {
+        const select = document.getElementById('add-parent');
+        if (!select) return;
+        const requestedParent = new URLSearchParams(window.location.search).get('parent');
+        const options = (typeof journeys !== 'undefined' ? journeys : []).map(function (j) {
+            const label = j.province && j.province !== j.city ? j.province + ' · ' + j.city : (j.province || j.city || j.title || '未命名');
+            return '<option value="' + j.id + '"' + (String(j.id) === String(requestedParent) ? ' selected' : '') + '>' + esc(label) + '</option>';
+        }).join('');
+        select.innerHTML = '<option value="new"' + (!requestedParent ? ' selected' : '') + '>新建一级卡片</option>' + options;
+    }
+
+    function renderItineraryEditor(table) {
+        table = normalizeTable(table);
+        const headers = table.headers.map(function (header, index) {
+            return '<th data-col="' + index + '">'
+                + '<div class="sub-itinerary-frame">'
+                +   '<input type="text" class="sub-itinerary-header" value="' + esc(header) + '">'
+                +   '<span class="sub-itinerary-col-actions">'
+                +     '<button type="button" class="itinerary-action-btn" data-action="add-col" aria-label="在右侧加列">' + Icons.svg('plus', { size: 12 }) + '</button>'
+                +     '<button type="button" class="itinerary-action-btn itinerary-action-btn--danger" data-action="delete-col" aria-label="删除该列">' + Icons.svg('trash2', { size: 12 }) + '</button>'
+                +   '</span>'
+                + '</div>'
+                + '</th>';
+        }).join('');
+        const rows = table.rows.map(function (row) {
+            return buildRow(row, table.headers.length);
+        }).join('');
+        document.getElementById('add-itinerary-editor').innerHTML = ''
+            + '<div class="sub-itinerary-table-wrap">'
+            +   '<table class="sub-itinerary-table subcard-page-table">'
+            +     '<thead><tr>' + headers + '</tr></thead>'
+            +     '<tbody id="add-itinerary-rows">' + rows + '</tbody>'
+            +   '</table>'
+            + '</div>';
+    }
+
+    function buildRow(row, columnCount) {
+        const cells = [];
+        for (let i = 0; i < columnCount; i += 1) {
+            const actions = i === 0
+                ? '<span class="sub-itinerary-row-actions">'
+                    + '<button type="button" class="itinerary-action-btn" data-action="add-row" aria-label="在下方加行">' + Icons.svg('plus', { size: 12 }) + '</button>'
+                    + '<button type="button" class="itinerary-action-btn itinerary-action-btn--danger" data-action="delete-row" aria-label="删除该行">' + Icons.svg('trash2', { size: 12 }) + '</button>'
+                + '</span>'
+                : '';
+            cells.push('<td><div class="sub-itinerary-frame"><textarea class="sub-itinerary-cell" rows="2">' + esc(row && row[i] || '') + '</textarea>' + actions + '</div></td>');
+        }
+        return '<tr>' + cells.join('') + '</tr>';
+    }
+
+    function readTable() {
+        const headers = Array.prototype.map.call(document.querySelectorAll('.sub-itinerary-header'), function (input, index) {
+            return input.value.trim() || ['日期', '上午', '下午', '备注'][index] || ('列' + (index + 1));
+        });
+        const rows = Array.prototype.map.call(document.querySelectorAll('#add-itinerary-rows tr'), function (row) {
+            return Array.prototype.map.call(row.querySelectorAll('.sub-itinerary-cell'), function (cell) {
+                return cell.value.trim();
+            });
+        });
+        return normalizeTable({ headers: headers, rows: rows });
+    }
+
+    function dateRangeFromTable(table) {
+        table = normalizeTable(table);
+        const dateIndex = table.headers.indexOf('日期') >= 0 ? table.headers.indexOf('日期') : 0;
+        const firstRow = table.rows[0] || [];
+        const lastRow = table.rows[table.rows.length - 1] || firstRow;
+        const start = String(firstRow[dateIndex] || '').trim();
+        const end = String(lastRow[dateIndex] || '').trim() || start;
+        return { start: start, end: end };
+    }
+
+    function highlightsFromTable(table) {
+        table = normalizeTable(table);
+        const indexes = table.headers.reduce(function (list, header, index) {
+            if (header === '上午' || header === '下午') list.push(index);
+            return list;
+        }, []);
+        const seen = {};
+        return [].concat.apply([], table.rows.map(function (row) {
+            return indexes.map(function (i) { return row[i]; });
+        })).map(function (item) { return String(item || '').trim(); }).filter(function (item) {
+            if (!item || seen[item]) return false;
+            seen[item] = true;
+            return true;
+        });
+    }
+
+    function numeric(id) {
+        const n = parseFloat(document.getElementById(id).value);
+        return isNaN(n) ? 0 : n;
+    }
+
+    function getValue(id) {
+        const el = document.getElementById(id);
+        return el ? el.value.trim() : '';
+    }
+
+    function syncPrimaryFromSubcards(journey) {
+        const sub = journey.subCards[0];
+        journey.province = sub.province;
+        journey.city = sub.city;
+        journey.country = sub.country;
+        journey.date = sub.date;
+        journey.endDate = sub.endDate || sub.date;
+        journey.title = sub.city;
+        journey.emoji = sub.emoji;
+        journey.highlights = sub.highlights;
+        journey.cost = sub.cost;
+        journey.story = sub.story;
+        return journey;
     }
 
     function wireForm() {
-        const form = document.getElementById('add-form');
-        const province = document.getElementById('add-province');
-        const city = document.getElementById('add-city');
-        const name = document.getElementById('add-name');
-        const cancelBtn = document.getElementById('add-cancel-btn');
-
-        // Auto-fill name from province + city until user types it manually
-        function autoFillName() {
-            if (name.dataset.manual === 'true') return;
-            const p = province.value.trim();
-            const c = city.value.trim();
-            name.value = p && c && p !== c ? p + '·' + c : (p || c);
-            updatePreview();
-        }
-        name.addEventListener('input', function () {
-            if (name.value.trim() !== '') name.dataset.manual = 'true';
-            else name.dataset.manual = '';
-            updatePreview();
-        });
-        province.addEventListener('input', autoFillName);
-        city.addEventListener('input', autoFillName);
-
-        // Live preview on emoji + city changes
-        document.getElementById('add-emoji').addEventListener('input', updatePreview);
-
-        // Track dirtiness for cancel-confirm
-        form.addEventListener('input', function () { isDirty = true; });
-
-        // Per-field blur validation
-        REQUIRED_FIELDS.forEach(function (f) {
-            const input = document.getElementById(f.id);
-            input.addEventListener('blur', function () { validateField(f); });
-            input.addEventListener('input', function () {
-                if (input.getAttribute('aria-invalid') === 'true' && input.value.trim()) {
-                    clearFieldError(f);
-                }
-            });
+        document.getElementById('add-action-save').addEventListener('click', function () {
+            const form = document.getElementById('add-form');
+            if (form && typeof form.requestSubmit === 'function') form.requestSubmit();
+            else handleSave();
         });
 
-        // Photo upload
-        wirePhoto();
+        document.getElementById('add-itinerary-editor').addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const table = readTable();
+            const action = btn.dataset.action;
+            if (action === 'add-row') {
+                const row = btn.closest('tr');
+                const index = Array.prototype.indexOf.call(document.querySelectorAll('#add-itinerary-rows tr'), row);
+                table.rows.splice(index + 1, 0, new Array(table.headers.length).fill(''));
+            } else if (action === 'delete-row') {
+                if (table.rows.length <= 1) return HsnUI.toast('至少保留一行行程', 'error');
+                const row = btn.closest('tr');
+                const index = Array.prototype.indexOf.call(document.querySelectorAll('#add-itinerary-rows tr'), row);
+                table.rows.splice(index, 1);
+            } else if (action === 'add-col') {
+                const col = Number(btn.closest('th').dataset.col);
+                table.headers.splice(col + 1, 0, '备注');
+                table.rows.forEach(function (row) { row.splice(col + 1, 0, ''); });
+            } else if (action === 'delete-col') {
+                if (table.headers.length <= 1) return HsnUI.toast('至少保留一列行程', 'error');
+                const col = Number(btn.closest('th').dataset.col);
+                table.headers.splice(col, 1);
+                table.rows.forEach(function (row) { row.splice(col, 1); });
+            }
+            renderItineraryEditor(table);
+        });
 
-        // Cancel
-        cancelBtn.addEventListener('click', handleCancel);
-
-        // Submit
-        form.addEventListener('submit', function (e) {
+        document.getElementById('add-form').addEventListener('submit', function (e) {
             e.preventDefault();
             handleSave();
         });
     }
 
-    function wirePhoto() {
-        const input = document.getElementById('add-photo');
-        const label = document.getElementById('add-photo-label');
-        const preview = document.getElementById('add-photo-preview');
-        const img = document.getElementById('add-photo-img');
-        const remove = document.getElementById('add-photo-remove');
-
-        input.addEventListener('change', function () {
-            const file = input.files && input.files[0];
-            if (!file) return;
-            if (!/^image\//.test(file.type)) {
-                HsnUI.toast('请选择图片文件', 'error');
-                input.value = '';
-                return;
+    function wireAutoResizeTextareas() {
+        document.querySelectorAll('.journey-story-textarea').forEach(function (textarea) {
+            function resize() {
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.max(textarea.scrollHeight, textarea.offsetHeight) + 'px';
             }
-            HsnUI.compressImage(file, { maxW: 1600, quality: 0.8 })
-                .then(function (dataUrl) {
-                    photoDataUrl = dataUrl;
-                    img.src = dataUrl;
-                    preview.classList.remove('is-hidden');
-                    label.classList.add('is-hidden');
-                    isDirty = true;
-                })
-                .catch(function () {
-                    HsnUI.toast('图片处理失败', 'error');
-                });
-        });
-
-        remove.addEventListener('click', function () {
-            photoDataUrl = '';
-            input.value = '';
-            img.src = '';
-            preview.classList.add('is-hidden');
-            label.classList.remove('is-hidden');
-        });
-
-        // Drag and drop onto the label
-        ['dragenter', 'dragover'].forEach(function (ev) {
-            label.addEventListener(ev, function (e) {
-                e.preventDefault();
-                label.classList.add('is-dragging');
-            });
-        });
-        ['dragleave', 'drop'].forEach(function (ev) {
-            label.addEventListener(ev, function (e) {
-                e.preventDefault();
-                label.classList.remove('is-dragging');
-            });
-        });
-        label.addEventListener('drop', function (e) {
-            const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-            if (!file) return;
-            if (!/^image\//.test(file.type)) {
-                HsnUI.toast('请选择图片文件', 'error');
-                return;
-            }
-            HsnUI.compressImage(file, { maxW: 1600, quality: 0.8 })
-                .then(function (dataUrl) {
-                    photoDataUrl = dataUrl;
-                    img.src = dataUrl;
-                    preview.classList.remove('is-hidden');
-                    label.classList.add('is-hidden');
-                    isDirty = true;
-                })
-                .catch(function () {
-                    HsnUI.toast('图片处理失败', 'error');
-                });
+            textarea.addEventListener('input', resize);
+            setTimeout(resize, 0);
         });
     }
-
-    // ------------------------------------------------------------------
-    // Live preview
-    // ------------------------------------------------------------------
-
-    function updatePreview() {
-        const emoji = document.getElementById('add-emoji').value.trim() || '📍';
-        const province = document.getElementById('add-province').value.trim();
-        const city = document.getElementById('add-city').value.trim();
-        const name = document.getElementById('add-name').value.trim();
-
-        const previewEmoji = document.getElementById('add-preview-emoji');
-        const previewTitle = document.getElementById('add-preview-title');
-        const previewMeta = document.getElementById('add-preview-meta');
-
-        previewEmoji.textContent = emoji;
-        previewTitle.textContent = name || (province && city && province !== city ? province + '·' + city : (province || city || '未命名旅程'));
-
-        const metaParts = [];
-        if (province && city && province !== city) metaParts.push(province + ' · ' + city);
-        else if (province || city) metaParts.push(province || city);
-        const date = document.getElementById('add-date').value;
-        if (date) metaParts.push(formatDateChinese(date));
-        previewMeta.textContent = metaParts.length ? metaParts.join(' · ') : '填写信息以预览';
-    }
-
-    function formatDateChinese(iso) {
-        const parts = iso.split('-');
-        if (parts.length !== 3) return iso;
-        return parts[0] + '年' + parseInt(parts[1], 10) + '月' + parseInt(parts[2], 10) + '日';
-    }
-
-    // ------------------------------------------------------------------
-    // Validation
-    // ------------------------------------------------------------------
-
-    function validateField(field) {
-        const input = document.getElementById(field.id);
-        const errEl = document.getElementById(field.errId);
-        if (!input.value.trim()) {
-            input.setAttribute('aria-invalid', 'true');
-            input.setAttribute('aria-describedby', field.errId);
-            if (errEl) errEl.textContent = field.label + '为必填项';
-            return false;
-        }
-        clearFieldError(field);
-        return true;
-    }
-
-    function clearFieldError(field) {
-        const input = document.getElementById(field.id);
-        const errEl = document.getElementById(field.errId);
-        input.removeAttribute('aria-invalid');
-        input.removeAttribute('aria-describedby');
-        if (errEl) errEl.textContent = '';
-    }
-
-    function validateAll() {
-        let firstInvalid = null;
-        REQUIRED_FIELDS.forEach(function (f) {
-            const ok = validateField(f);
-            if (!ok && !firstInvalid) firstInvalid = f;
-        });
-        return firstInvalid;
-    }
-
-    // ------------------------------------------------------------------
-    // Save / Cancel
-    // ------------------------------------------------------------------
 
     function handleSave() {
-        const firstInvalid = validateAll();
-        if (firstInvalid) {
-            HsnUI.toast('请检查表单中的必填项', 'error');
-            const el = document.getElementById(firstInvalid.id);
-            if (el) {
-                el.focus();
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+        const table = readTable();
+        const range = dateRangeFromTable(table);
+        const city = getValue('add-city');
+        if (!city || !range.start) {
+            HsnUI.toast('请填写城市和行程表第一行日期', 'error');
+            const focus = !city ? document.getElementById('add-city') : null;
+            if (focus) focus.focus();
             return;
         }
 
-        const province = document.getElementById('add-province').value.trim();
-        const city = document.getElementById('add-city').value.trim();
-        const emoji = document.getElementById('add-emoji').value.trim() || '📍';
-        const name = document.getElementById('add-name').value.trim();
-        const date = document.getElementById('add-date').value;
-        const endDate = document.getElementById('add-endDate').value || date;
-        const highlightsStr = document.getElementById('add-highlights').value.trim();
-
-        const cost = {
-            package: numericValue('add-cost-package'),
-            transport: numericValue('add-cost-transport'),
-            accommodation: numericValue('add-cost-accommodation'),
-            food: numericValue('add-cost-food'),
-        };
-
-        const highlights = highlightsStr
-            ? highlightsStr.split(/[、,]/).map(function (h) { return h.trim(); }).filter(Boolean)
-            : [];
-
-        const subCard = { name: name, date: date, endDate: endDate, province: province, city: city, emoji: emoji, highlights: highlights, cost: cost };
-        const title = province && province !== city ? province + '·' + city : (province || city);
-
-        const journey = {
-            province: province,
+        const subCard = {
+            id: 'sub-' + Date.now(),
+            name: city,
+            province: getValue('add-province'),
             city: city,
-            emoji: emoji,
-            date: date,
-            endDate: endDate,
-            title: title,
-            highlights: highlights,
-            cost: cost,
-            subCards: [subCard],
+            country: getValue('add-region-type') === 'international' ? '国外' : '中国',
+            date: range.start,
+            endDate: range.end || range.start,
+            emoji: getValue('add-emoji') || '📍',
+            itineraryTable: table,
+            highlights: highlightsFromTable(table),
+            cost: {
+                package: numeric('add-cost-package'),
+                transport: numeric('add-cost-transport'),
+                accommodation: numeric('add-cost-accommodation'),
+                food: numeric('add-cost-food'),
+                shopping: numeric('add-cost-shopping'),
+                ticket: numeric('add-cost-ticket'),
+            },
+            story: getValue('add-story'),
         };
 
-        if (photoDataUrl) journey.photo = photoDataUrl;
-
-        try {
-            const newId = addJourney(journey);
-            isDirty = false;
-            HsnUI.toast('已添加新旅程', 'success');
-            setTimeout(function () {
-                window.location.href = 'detail.html?id=' + newId;
-            }, 300);
-        } catch (err) {
-            console.error('保存失败：', err);
-            HsnUI.toast('保存失败，请重试', 'error');
+        const parent = getValue('add-parent') || 'new';
+        let targetId;
+        let subIndex = 0;
+        if (parent === 'new') {
+            targetId = addJourney(syncPrimaryFromSubcards({
+                title: city,
+                subCards: [subCard],
+            }));
+        } else {
+            const target = getJourneyById(parent);
+            if (!target) return HsnUI.toast('未找到归属一级卡片', 'error');
+            const subcards = target.subCards && target.subCards.length ? target.subCards.slice() : [{
+                id: 'sub-' + target.id + '-1',
+                name: target.title || target.city,
+                province: target.province,
+                city: target.city,
+                country: target.country,
+                date: target.date,
+                endDate: target.endDate || target.date,
+                emoji: target.emoji || '📍',
+                highlights: target.highlights || [],
+                cost: target.cost || {},
+                story: target.story || '',
+            }];
+            subcards.push(subCard);
+            target.subCards = subcards;
+            updateJourney(target.id, target);
+            targetId = target.id;
+            subIndex = subcards.length - 1;
         }
-    }
 
-    function numericValue(id) {
-        const v = document.getElementById(id).value;
-        const n = parseFloat(v);
-        return isNaN(n) ? 0 : n;
+        HsnUI.toast('已添加旅程', 'success');
+        window.location.href = 'detail.html?id=' + encodeURIComponent(targetId) + '&sub=' + encodeURIComponent(subIndex) + '&edit=1';
     }
-
-    function handleCancel() {
-        if (!isDirty) {
-            window.location.href = 'index.html';
-            return;
-        }
-        HsnUI.confirm({
-            title: '放弃当前编辑？',
-            message: '已填写的内容将不会保存。',
-            confirmText: '放弃',
-            cancelText: '继续编辑',
-            danger: true,
-        }).then(function (ok) {
-            if (ok) {
-                isDirty = false;
-                window.location.href = 'index.html';
-            }
-        });
-    }
-
-    // Warn before page unload if dirty
-    window.addEventListener('beforeunload', function (e) {
-        if (!isDirty) return;
-        e.preventDefault();
-        e.returnValue = '';
-    });
 })();

@@ -15,6 +15,8 @@
     document.addEventListener('DOMContentLoaded', function () {
         const params = new URLSearchParams(window.location.search);
         const id = params.get('id');
+        const subIndex = params.get('sub');
+        const shouldEdit = params.get('edit') === '1';
         const journey = getJourneyById(id);
 
         if (!journey) {
@@ -26,6 +28,11 @@
         document.title = pageTitle(journey) + ' - HSN Journey Traces';
         renderView(journey);
         renderActions(journey);
+        if (subIndex !== null && shouldEdit) {
+            startSubcardEdit(journey.id, Number(subIndex));
+        } else if (shouldEdit) {
+            startEdit(journey.id);
+        }
     });
 
     // ------------------------------------------------------------------
@@ -48,6 +55,170 @@
     function fmtNumber(n) {
         const v = Number(n);
         return isNaN(v) ? '0' : v.toLocaleString();
+    }
+
+    function numericCost(cost) {
+        cost = cost || {};
+        return {
+            package: Number(cost.package) || 0,
+            transport: Number(cost.transport) || 0,
+            accommodation: Number(cost.accommodation) || 0,
+            food: Number(cost.food) || 0,
+            shopping: Number(cost.shopping) || 0,
+            ticket: Number(cost.ticket) || 0,
+        };
+    }
+
+    function unique(list) {
+        const seen = {};
+        return (list || []).filter(function (item) {
+            const key = String(item || '').trim();
+            if (!key || seen[key]) return false;
+            seen[key] = true;
+            return true;
+        });
+    }
+
+    function defaultSubcardTable() {
+        return {
+            headers: ['日期', '上午', '下午', '备注'],
+            rows: [
+                ['', '', '', ''],
+                ['', '', '', ''],
+                ['', '', '', ''],
+            ],
+        };
+    }
+
+    function normalizeSubcardTable(table) {
+        const fallback = defaultSubcardTable();
+        if (!table || !Array.isArray(table.headers) || !Array.isArray(table.rows)) return fallback;
+        let headers = (table.headers.length ? table.headers : fallback.headers).filter(function (h) { return h !== '晚上'; });
+        headers = headers.map(function (h, index) { return h || fallback.headers[index] || ('列' + (index + 1)); });
+        fallback.headers.forEach(function (h) {
+            if (!headers.includes(h)) headers.push(h);
+        });
+        const rows = table.rows.length ? table.rows.map(function (row) {
+            const next = Array.isArray(row) ? row.slice(0, headers.length) : [];
+            while (next.length < headers.length) next.push('');
+            return next;
+        }) : fallback.rows.map(function (row) { return row.slice(); });
+        while (rows.length < 3) rows.push(new Array(headers.length).fill(''));
+        return { headers: headers, rows: rows };
+    }
+
+    function subcardFromJourney(journey) {
+        return {
+            id: 'sub-' + journey.id + '-1',
+            name: journey.title || journey.city || '未命名行程',
+            province: journey.province || '',
+            city: journey.city || '',
+            country: journey.country || '中国',
+            date: journey.date || '',
+            endDate: journey.endDate || journey.date || '',
+            emoji: journey.emoji || '📍',
+            highlights: (journey.highlights || []).slice(),
+            itineraryTable: null,
+            cost: numericCost(journey.cost),
+            story: journey.story || '',
+            photo: journey.photo || '',
+        };
+    }
+
+    function getSubcards(journey) {
+        const source = journey.subCards && journey.subCards.length ? journey.subCards : [subcardFromJourney(journey)];
+        return source.map(function (sub, index) {
+            return {
+                id: sub.id || ('sub-' + journey.id + '-' + (index + 1)),
+                name: sub.name || sub.title || sub.city || journey.title || '未命名行程',
+                province: sub.province || journey.province || '',
+                city: sub.city || journey.city || '',
+                country: sub.country || journey.country || '中国',
+                date: sub.date || journey.date || '',
+                endDate: sub.endDate || sub.date || journey.endDate || journey.date || '',
+                emoji: sub.emoji || journey.emoji || '📍',
+                highlights: (sub.highlights || []).slice(),
+                itineraryTable: sub.itineraryTable ? normalizeSubcardTable(sub.itineraryTable) : null,
+                cost: numericCost(sub.cost),
+                story: sub.story || '',
+                photo: sub.photo || '',
+            };
+        });
+    }
+
+    function tableForSubcard(subcard) {
+        const table = normalizeSubcardTable(subcard.itineraryTable || defaultSubcardTable());
+        const dateIndex = table.headers.indexOf('日期') >= 0 ? table.headers.indexOf('日期') : 0;
+        if (!subcard.itineraryTable) {
+            if (subcard.date) table.rows[0][dateIndex] = subcard.date;
+            if (subcard.endDate && subcard.endDate !== subcard.date) table.rows[table.rows.length - 1][dateIndex] = subcard.endDate;
+        }
+        return table;
+    }
+
+    function dateRangeFromSubcardTable(table) {
+        table = normalizeSubcardTable(table);
+        const dateIndex = table.headers.indexOf('日期') >= 0 ? table.headers.indexOf('日期') : 0;
+        const firstRow = table.rows[0] || [];
+        const lastRow = table.rows[table.rows.length - 1] || firstRow;
+        const start = String(firstRow[dateIndex] || '').trim();
+        const end = String(lastRow[dateIndex] || '').trim() || start;
+        return { start: start, end: end };
+    }
+
+    function highlightsFromSubcardTable(table, fallback) {
+        table = normalizeSubcardTable(table);
+        const indexes = table.headers.reduce(function (list, header, index) {
+            if (header === '上午' || header === '下午') list.push(index);
+            return list;
+        }, []);
+        const values = unique([].concat.apply([], table.rows.map(function (row) {
+            return indexes.map(function (i) { return row[i]; });
+        })).map(function (item) { return String(item || '').trim(); })).filter(Boolean);
+        return values.length ? values : (fallback || []).slice();
+    }
+
+    function sumSubcardCosts(subcards) {
+        return subcards.reduce(function (sum, sub) {
+            const cost = numericCost(sub.cost);
+            Object.keys(sum).forEach(function (key) { sum[key] += cost[key] || 0; });
+            return sum;
+        }, { package: 0, transport: 0, accommodation: 0, food: 0, shopping: 0, ticket: 0 });
+    }
+
+    function syncPrimaryFromSubcards(journey) {
+        const subcards = getSubcards(journey);
+        if (!subcards.length) return journey;
+        if (subcards.length === 1) {
+            const sub = subcards[0];
+            Object.assign(journey, {
+                province: sub.province,
+                city: sub.city,
+                country: sub.country,
+                date: sub.date,
+                endDate: sub.endDate || sub.date,
+                title: sub.name || sub.city,
+                emoji: sub.emoji,
+                highlights: highlightsFromSubcardTable(sub.itineraryTable, sub.highlights),
+                cost: numericCost(sub.cost),
+                story: sub.story || journey.story || '',
+                subCards: subcards,
+            });
+            return journey;
+        }
+        const dates = subcards.map(function (s) { return s.date; }).filter(Boolean).sort();
+        const endDates = subcards.map(function (s) { return s.endDate || s.date; }).filter(Boolean).sort();
+        journey.province = unique(subcards.map(function (s) { return s.province; })).join(' · ') || journey.province;
+        journey.city = unique(subcards.map(function (s) { return s.city; })).join(' · ') || journey.city;
+        journey.country = unique(subcards.map(function (s) { return s.country; })).join(' · ') || journey.country;
+        journey.date = dates[0] || journey.date;
+        journey.endDate = endDates[endDates.length - 1] || journey.endDate;
+        journey.highlights = unique([].concat.apply([], subcards.map(function (sub) {
+            return highlightsFromSubcardTable(sub.itineraryTable, sub.highlights);
+        }))).slice(0, 8);
+        journey.cost = sumSubcardCosts(subcards);
+        journey.subCards = subcards;
+        return journey;
     }
 
     function renderNotFound() {
@@ -278,6 +449,95 @@
         editEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
+    function startSubcardEdit(id, index) {
+        const journey = getJourneyById(id);
+        if (!journey) return;
+        const subcards = getSubcards(journey);
+        const subcard = subcards[index];
+        if (!subcard) {
+            renderNotFound();
+            return;
+        }
+
+        const cost = numericCost(subcard.cost);
+        const regionType = subcard.country && subcard.country !== '中国' ? 'international' : 'domestic';
+        const parentOptions = buildParentOptions(id);
+        const editEl = document.getElementById('detail-edit');
+        editEl.innerHTML = ''
+            + '<form class="edit-form subcard-page-form" id="subcard-edit-form" novalidate>'
+            +   '<section class="form-section">'
+            +     '<div class="form-group subcard-parent-field"><label for="sub-edit-parent">归属一级卡片</label><select id="sub-edit-parent">' + parentOptions + '</select></div>'
+            +     '<div class="form-row subcard-page-form__basic">'
+            +       formField('sub-edit-emoji', '图标', 'text', subcard.emoji || '📍', { maxlength: 4 })
+            +       formField('sub-edit-city', '城市 *', 'text', subcard.city || '', { required: true })
+            +       formField('sub-edit-province', '省份/大区', 'text', subcard.province || '')
+            +       formGroup('sub-edit-region-type', '国内/国外',
+                      '<select id="sub-edit-region-type" name="sub-edit-region-type">'
+            +           '<option value="domestic"' + (regionType === 'domestic' ? ' selected' : '') + '>国内</option>'
+            +           '<option value="international"' + (regionType === 'international' ? ' selected' : '') + '>国外</option>'
+            +         '</select>')
+            +     '</div>'
+            +   '</section>'
+            +   '<section class="form-section">'
+            +     '<h2 class="form-section__title">费用</h2>'
+            +     '<div class="form-row subcard-page-form__costs">'
+            +       formField('sub-edit-cost-package', '报团费', 'number', cost.package || '', { min: 0 })
+            +       formField('sub-edit-cost-transport', '交通费', 'number', cost.transport || '', { min: 0 })
+            +       formField('sub-edit-cost-accommodation', '住宿费', 'number', cost.accommodation || '', { min: 0 })
+            +       formField('sub-edit-cost-food', '餐饮费', 'number', cost.food || '', { min: 0 })
+            +       formField('sub-edit-cost-shopping', '购物费', 'number', cost.shopping || '', { min: 0 })
+            +       formField('sub-edit-cost-ticket', '门票费', 'number', cost.ticket || '', { min: 0 })
+            +     '</div>'
+            +   '</section>'
+            +   '<section class="form-section">'
+            +     '<h2 class="form-section__title">行程</h2>'
+            +     '<div id="subcard-itinerary-editor"></div>'
+            +   '</section>'
+            +   '<section class="form-section">'
+            +     '<h2 class="form-section__title">这段旅程的故事</h2>'
+            +     '<textarea id="sub-edit-story" class="journey-story-textarea" rows="5">' + esc(subcard.story || '') + '</textarea>'
+            +   '</section>'
+            + '</form>';
+
+        renderSubcardActions(journey.id, index);
+        renderSubcardItineraryEditor(tableForSubcard(subcard));
+        wireSubcardEditForm(journey.id, index);
+        wireAutoResizeTextareas(editEl);
+        document.getElementById('main').setAttribute('data-mode', 'edit');
+        document.body.classList.add('is-editing');
+        document.getElementById('detail-view').hidden = true;
+        document.getElementById('action-bar').hidden = false;
+        editEl.hidden = false;
+        editEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function renderSubcardActions(id, index) {
+        const bar = document.getElementById('action-bar');
+        bar.innerHTML = ''
+            + '<button class="btn btn-secondary" type="button" id="sub-action-edit" disabled>'
+            +   Icons.svg('edit', { size: 16 }) + '<span>编辑</span></button>'
+            + '<button class="btn btn-primary" type="button" id="sub-action-save">'
+            +   Icons.svg('check', { size: 16 }) + '<span>保存</span></button>'
+            + '<button class="btn btn-danger" type="button" id="sub-action-delete">'
+            +   Icons.svg('trash2', { size: 16 }) + '<span>删除</span></button>';
+        document.getElementById('sub-action-save').addEventListener('click', function () {
+            const form = document.getElementById('subcard-edit-form');
+            if (form && typeof form.requestSubmit === 'function') form.requestSubmit();
+            else saveSubcardEdit(id, index);
+        });
+        document.getElementById('sub-action-delete').addEventListener('click', function () {
+            deleteSubcardFromDetail(id, index);
+        });
+    }
+
+    function buildParentOptions(currentId) {
+        const list = (typeof journeys !== 'undefined' ? journeys : []);
+        return '<option value="new">新建一级卡片</option>' + list.map(function (j) {
+            const label = j.province && j.province !== j.city ? j.province + ' · ' + j.city : (j.province || j.city || j.title || '未命名');
+            return '<option value="' + j.id + '"' + (String(j.id) === String(currentId) ? ' selected' : '') + '>' + esc(label) + '</option>';
+        }).join('');
+    }
+
     function formField(id, label, type, value, opts) {
         opts = opts || {};
         const attrs = [
@@ -298,6 +558,135 @@
             +    '<label for="' + id + '">' + esc(label) + '</label>'
             +    control
             + '</div>';
+    }
+
+    function wireAutoResizeTextareas(scope) {
+        (scope || document).querySelectorAll('.journey-story-textarea').forEach(function (textarea) {
+            function resize() {
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.max(textarea.scrollHeight, textarea.offsetHeight) + 'px';
+            }
+            textarea.addEventListener('input', resize);
+            setTimeout(resize, 0);
+        });
+    }
+
+    function renderSubcardItineraryEditor(table) {
+        table = normalizeSubcardTable(table);
+        const container = document.getElementById('subcard-itinerary-editor');
+        const headers = table.headers.map(function (header, index) {
+            return '<th data-col="' + index + '">'
+                + '<div class="sub-itinerary-frame">'
+                +   '<input type="text" class="sub-itinerary-header" value="' + esc(header) + '">'
+                +   '<span class="sub-itinerary-col-actions">'
+                +     '<button type="button" class="itinerary-action-btn" data-action="add-sub-col" aria-label="在右侧加列">' + Icons.svg('plus', { size: 12 }) + '</button>'
+                +     '<button type="button" class="itinerary-action-btn itinerary-action-btn--danger" data-action="delete-sub-col" aria-label="删除该列">' + Icons.svg('trash2', { size: 12 }) + '</button>'
+                +   '</span>'
+                + '</div>'
+                + '</th>';
+        }).join('');
+        const rows = table.rows.map(function (row) {
+            return buildSubcardItineraryRow(row, table.headers.length);
+        }).join('');
+        container.innerHTML = ''
+            + '<div class="sub-itinerary-table-wrap">'
+            +   '<table class="sub-itinerary-table subcard-page-table">'
+            +     '<thead><tr>' + headers + '</tr></thead>'
+            +     '<tbody id="sub-itinerary-rows">' + rows + '</tbody>'
+            +   '</table>'
+            + '</div>';
+    }
+
+    function buildSubcardItineraryRow(row, columnCount) {
+        const cells = [];
+        for (let i = 0; i < columnCount; i += 1) {
+            const actions = i === 0
+                ? '<span class="sub-itinerary-row-actions">'
+                    + '<button type="button" class="itinerary-action-btn" data-action="add-sub-row" aria-label="在下方加行">' + Icons.svg('plus', { size: 12 }) + '</button>'
+                    + '<button type="button" class="itinerary-action-btn itinerary-action-btn--danger" data-action="delete-sub-row" aria-label="删除该行">' + Icons.svg('trash2', { size: 12 }) + '</button>'
+                + '</span>'
+                : '';
+            cells.push('<td><div class="sub-itinerary-frame"><textarea class="sub-itinerary-cell" rows="2">' + esc(row && row[i] || '') + '</textarea>' + actions + '</div></td>');
+        }
+        return '<tr>' + cells.join('') + '</tr>';
+    }
+
+    function readSubcardItineraryEditor() {
+        const headers = Array.prototype.map.call(document.querySelectorAll('.sub-itinerary-header'), function (input, index) {
+            return input.value.trim() || ['日期', '上午', '下午', '备注'][index] || ('列' + (index + 1));
+        });
+        const rows = Array.prototype.map.call(document.querySelectorAll('#sub-itinerary-rows tr'), function (row) {
+            return Array.prototype.map.call(row.querySelectorAll('.sub-itinerary-cell'), function (cell) {
+                return cell.value.trim();
+            });
+        });
+        return normalizeSubcardTable({ headers: headers, rows: rows });
+    }
+
+    function wireSubcardEditForm(id, index) {
+        const form = document.getElementById('subcard-edit-form');
+        document.getElementById('subcard-itinerary-editor').addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const action = btn.dataset.action;
+            if (action === 'add-sub-row') {
+                addSubcardTableRow(btn.closest('tr'));
+            } else if (action === 'delete-sub-row') {
+                deleteSubcardTableRow(btn.closest('tr'));
+            } else if (action === 'add-sub-col') {
+                addSubcardTableColumn(Number(btn.closest('th').dataset.col));
+            } else if (action === 'delete-sub-col') {
+                deleteSubcardTableColumn(Number(btn.closest('th').dataset.col));
+            }
+        });
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            saveSubcardEdit(id, index);
+        });
+    }
+
+    function refreshSubcardTable(table) {
+        renderSubcardItineraryEditor(table);
+    }
+
+    function addSubcardTableRow(afterRow) {
+        const table = readSubcardItineraryEditor();
+        const rowIndex = Array.prototype.indexOf.call(document.querySelectorAll('#sub-itinerary-rows tr'), afterRow);
+        const insertAt = rowIndex >= 0 ? rowIndex + 1 : table.rows.length;
+        table.rows.splice(insertAt, 0, new Array(table.headers.length).fill(''));
+        refreshSubcardTable(table);
+    }
+
+    function deleteSubcardTableRow(row) {
+        const table = readSubcardItineraryEditor();
+        if (table.rows.length <= 1) {
+            HsnUI.toast('至少保留一行行程', 'error');
+            return;
+        }
+        const rowIndex = Array.prototype.indexOf.call(document.querySelectorAll('#sub-itinerary-rows tr'), row);
+        if (rowIndex >= 0) table.rows.splice(rowIndex, 1);
+        refreshSubcardTable(table);
+    }
+
+    function addSubcardTableColumn(colIndex) {
+        const table = readSubcardItineraryEditor();
+        const insertAt = Number.isFinite(colIndex) ? colIndex + 1 : table.headers.length;
+        table.headers.splice(insertAt, 0, '备注');
+        table.rows.forEach(function (row) { row.splice(insertAt, 0, ''); });
+        refreshSubcardTable(table);
+    }
+
+    function deleteSubcardTableColumn(colIndex) {
+        const table = readSubcardItineraryEditor();
+        if (table.headers.length <= 1) {
+            HsnUI.toast('至少保留一列行程', 'error');
+            return;
+        }
+        if (Number.isFinite(colIndex)) {
+            table.headers.splice(colIndex, 1);
+            table.rows.forEach(function (row) { row.splice(colIndex, 1); });
+        }
+        refreshSubcardTable(table);
     }
 
     function renderItineraryEditor(itinerary) {
@@ -499,6 +888,117 @@
         document.getElementById('action-bar').hidden = false;
         HsnUI.toast('已保存', 'success');
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function saveSubcardEdit(id, index) {
+        const journey = getJourneyById(id);
+        if (!journey) return;
+        const subcards = getSubcards(journey);
+        const existing = subcards[index];
+        if (!existing) return;
+        const table = readSubcardItineraryEditor();
+        const range = dateRangeFromSubcardTable(table);
+        const city = readField('sub-edit-city');
+        if (!city || !range.start) {
+            HsnUI.toast('请填写城市和行程表第一行日期', 'error');
+            const focus = !city ? 'sub-edit-city' : null;
+            if (focus && document.getElementById(focus)) document.getElementById(focus).focus();
+            return;
+        }
+
+        const updatedSubcard = {
+            id: existing.id,
+            name: city,
+            province: readField('sub-edit-province'),
+            city: city,
+            country: readField('sub-edit-region-type') === 'international' ? '国外' : '中国',
+            date: range.start,
+            endDate: range.end || range.start,
+            emoji: readField('sub-edit-emoji') || '📍',
+            itineraryTable: table,
+            highlights: highlightsFromSubcardTable(table, existing.highlights),
+            cost: {
+                package: readNumber('sub-edit-cost-package'),
+                transport: readNumber('sub-edit-cost-transport'),
+                accommodation: readNumber('sub-edit-cost-accommodation'),
+                food: readNumber('sub-edit-cost-food'),
+                shopping: readNumber('sub-edit-cost-shopping'),
+                ticket: readNumber('sub-edit-cost-ticket'),
+            },
+            story: readField('sub-edit-story'),
+            photo: existing.photo || '',
+        };
+
+        const parent = readField('sub-edit-parent') || String(id);
+        let nextJourneyId = id;
+        let nextIndex = index;
+
+        if (parent === String(id)) {
+            subcards[index] = updatedSubcard;
+            journey.subCards = subcards;
+            syncPrimaryFromSubcards(journey);
+            updateJourney(id, journey);
+        } else {
+            subcards.splice(index, 1);
+            if (subcards.length) {
+                journey.subCards = subcards;
+                syncPrimaryFromSubcards(journey);
+                updateJourney(id, journey);
+            } else {
+                deleteJourney(id);
+            }
+
+            if (parent === 'new') {
+                const newJourney = syncPrimaryFromSubcards({
+                    id: undefined,
+                    title: updatedSubcard.city,
+                    subCards: [updatedSubcard],
+                });
+                nextJourneyId = addJourney(newJourney);
+                nextIndex = 0;
+            } else {
+                const target = getJourneyById(parent);
+                if (target) {
+                    const targetSubcards = getSubcards(target);
+                    targetSubcards.push(updatedSubcard);
+                    target.subCards = targetSubcards;
+                    syncPrimaryFromSubcards(target);
+                    updateJourney(target.id, target);
+                    nextJourneyId = target.id;
+                    nextIndex = targetSubcards.length - 1;
+                }
+            }
+        }
+
+        HsnUI.toast('二级行程已保存', 'success');
+        history.replaceState(null, '', 'detail.html?id=' + encodeURIComponent(nextJourneyId) + '&sub=' + encodeURIComponent(nextIndex) + '&edit=1');
+        const refreshedJourney = getJourneyById(nextJourneyId);
+        currentJourney = refreshedJourney || currentJourney;
+        if (refreshedJourney) startSubcardEdit(refreshedJourney.id, nextIndex);
+    }
+
+    function deleteSubcardFromDetail(id, index) {
+        const journey = getJourneyById(id);
+        if (!journey) return;
+        const subcards = getSubcards(journey);
+        if (subcards.length <= 1) {
+            HsnUI.toast('至少保留一个二级行程', 'error');
+            return;
+        }
+        HsnUI.confirm({
+            title: '删除二级行程',
+            message: '确定删除这段二级行程吗？',
+            confirmText: '删除',
+            danger: true,
+        }).then(function (ok) {
+            if (!ok) return;
+            subcards.splice(index, 1);
+            journey.subCards = subcards;
+            syncPrimaryFromSubcards(journey);
+            updateJourney(id, journey);
+            HsnUI.toast('二级行程已删除', 'success');
+            window.location.href = 'cities.html';
+        });
     }
 
     function cancelEdit() {

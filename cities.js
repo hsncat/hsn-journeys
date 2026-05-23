@@ -18,11 +18,10 @@
         bindToolbar();
         renderGrid();
         if (window.location.hash === '#add-subcard') {
-            setTimeout(function () {
-                showSubcardForm({ mode: 'add' });
-                history.replaceState(null, '', window.location.pathname);
-            }, 80);
+            window.location.replace('add.html');
+            return;
         }
+        focusJourneyFromUrl();
     });
 
     // ------------------------------------------------------------------
@@ -70,7 +69,7 @@
         const addBtn = document.getElementById('add-subcard-btn');
         if (addBtn) {
             addBtn.addEventListener('click', function () {
-                showSubcardForm({ mode: 'add' });
+                window.location.href = 'add.html';
             });
         }
     }
@@ -130,6 +129,31 @@
         }
 
         list.forEach(function (j) { grid.appendChild(createPrimaryCard(j)); });
+    }
+
+    function focusJourneyFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('journey');
+        if (!id) return;
+        setTimeout(function () {
+            const wrapper = document.querySelector('.primary-card-wrapper[data-id="' + CSS.escape(id) + '"]');
+            if (!wrapper) return;
+            const primary = wrapper.querySelector('.primary-card');
+            const timelineItem = document.querySelector('.timeline-link[data-target="' + CSS.escape(id) + '"]');
+
+            if (!wrapper.classList.contains('is-expanded')) {
+                wrapper.classList.add('is-expanded');
+                if (primary) primary.setAttribute('aria-expanded', 'true');
+            }
+            if (timelineItem) {
+                document.querySelectorAll('.timeline-item').forEach(function (item) {
+                    item.classList.toggle('is-active', item.contains(timelineItem));
+                });
+            }
+            wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            wrapper.classList.add('is-highlighted');
+            setTimeout(function () { wrapper.classList.remove('is-highlighted'); }, 1200);
+        }, 120);
     }
 
     function renderTimeline(list) {
@@ -198,6 +222,7 @@
             + '<span title="交通">' + Icons.svg('car', { size: 14 }) + ' ' + esc(formatCost(cost.transport)) + '</span>'
             + '<span title="住宿">' + Icons.svg('bed', { size: 14 }) + ' ' + esc(formatCost(cost.accommodation)) + '</span>'
             + '<span title="餐饮">' + Icons.svg('utensils', { size: 14 }) + ' ' + esc(formatCost(cost.food)) + '</span>'
+            + '<span title="购物">' + Icons.svg('dollarSign', { size: 14 }) + ' ' + esc(formatCost(cost.shopping)) + '</span>'
             + '<span title="门票">' + Icons.svg('dollarSign', { size: 14 }) + ' ' + esc(formatCost(cost.ticket)) + '</span>';
     }
 
@@ -205,7 +230,7 @@
         if (!cost) return 0;
         return (Number(cost.package) || 0) + (Number(cost.transport) || 0)
             + (Number(cost.accommodation) || 0) + (Number(cost.food) || 0)
-            + (Number(cost.ticket) || 0);
+            + (Number(cost.shopping) || 0) + (Number(cost.ticket) || 0);
     }
 
     function unique(list) {
@@ -225,6 +250,7 @@
             transport: Number(cost.transport) || 0,
             accommodation: Number(cost.accommodation) || 0,
             food: Number(cost.food) || 0,
+            shopping: Number(cost.shopping) || 0,
             ticket: Number(cost.ticket) || 0,
         };
     }
@@ -275,9 +301,10 @@
             sum.transport += cost.transport;
             sum.accommodation += cost.accommodation;
             sum.food += cost.food;
+            sum.shopping += cost.shopping;
             sum.ticket += cost.ticket;
             return sum;
-        }, { package: 0, transport: 0, accommodation: 0, food: 0, ticket: 0 });
+        }, { package: 0, transport: 0, accommodation: 0, food: 0, shopping: 0, ticket: 0 });
     }
 
     function syncPrimaryFromSubcards(journey, opts) {
@@ -369,6 +396,28 @@
         return { headers: headers, rows: rows };
     }
 
+    function tableForSubcardForm(data) {
+        const hasTable = data && data.itineraryTable;
+        const table = normalizeItineraryTable(hasTable ? data.itineraryTable : defaultItineraryTable());
+        const dateIndex = table.headers.indexOf('日期') >= 0 ? table.headers.indexOf('日期') : 0;
+        if (!hasTable && data) {
+            while (table.rows.length < 3) table.rows.push(new Array(table.headers.length).fill(''));
+            if (data.date) table.rows[0][dateIndex] = data.date;
+            if (data.endDate && data.endDate !== data.date) table.rows[table.rows.length - 1][dateIndex] = data.endDate;
+        }
+        return table;
+    }
+
+    function dateRangeFromItinerary(table) {
+        table = normalizeItineraryTable(table);
+        const dateIndex = table.headers.indexOf('日期') >= 0 ? table.headers.indexOf('日期') : 0;
+        const firstRow = table.rows[0] || [];
+        const lastRow = table.rows[table.rows.length - 1] || firstRow;
+        const start = String(firstRow[dateIndex] || '').trim();
+        const end = String(lastRow[dateIndex] || '').trim() || start;
+        return { start: start, end: end };
+    }
+
     function highlightsFromItinerary(subcard) {
         if (!subcard.itineraryTable) return (subcard.highlights || []).slice();
         const table = normalizeItineraryTable(subcard.itineraryTable);
@@ -399,7 +448,7 @@
         const emojiLabel = esc(journey.city || '') + '封面';
 
         wrapper.innerHTML = ''
-            + '<div class="primary-card" tabindex="0" role="button" aria-expanded="false" aria-label="展开 ' + esc(title) + '">'
+            + '<div class="primary-card" tabindex="0" role="button" aria-expanded="false" aria-label="展示 ' + esc(title) + ' 的二级卡片">'
             +   '<div class="primary-emoji" role="img" aria-label="' + emojiLabel + '">' + esc(journey.emoji || '📍') + '</div>'
             +   '<div class="primary-info">'
             +     '<div class="primary-title">' + title + '</div>'
@@ -419,19 +468,12 @@
         const cardBody = wrapper.querySelector('.card-body');
         const addSubcardBtn = wrapper.querySelector('.add-subcard-inline-btn');
         const mergeSubcardsBtn = wrapper.querySelector('.merge-subcards-inline-btn');
-        const editFormContainer = wrapper.querySelector('.primary-edit-form');
+        renderCardBody(journey, cardBody);
+        cardBody.dataset.loaded = 'true';
 
         function toggleBody() {
-            if (!editFormContainer.hidden) {
-                editFormContainer.hidden = true;
-                editFormContainer.innerHTML = '';
-            }
             const isOpen = wrapper.classList.toggle('is-expanded');
             primary.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-            if (isOpen && !cardBody.dataset.loaded) {
-                renderCardBody(journey, cardBody);
-                cardBody.dataset.loaded = 'true';
-            }
         }
 
         primary.addEventListener('click', function (e) {
@@ -448,7 +490,7 @@
 
         addSubcardBtn.addEventListener('click', function (e) {
             e.stopPropagation();
-            showSubcardForm({ mode: 'add', journeyId: journey.id });
+            window.location.href = 'add.html?parent=' + encodeURIComponent(journey.id);
         });
 
         mergeSubcardsBtn.addEventListener('click', function (e) {
@@ -487,6 +529,9 @@
         const card = document.createElement('article');
         card.className = 'secondary-card';
         card.dataset.index = index;
+        card.tabIndex = 0;
+        card.setAttribute('role', 'link');
+        card.setAttribute('aria-label', '编辑 ' + (subcard.city || '二级行程'));
         const highlights = highlightsFromItinerary(subcard).slice(0, 5).map(function (h) {
             return '<span class="location-chip">' + esc(h) + '</span>';
         }).join('');
@@ -509,18 +554,22 @@
             +   (subcard.story ? '<p class="secondary-card__story">' + esc(subcard.story) + '</p>' : '')
             +   '<div class="secondary-card__footer">'
             +     '<span>' + Icons.svg('dollarSign', { size: 14 }) + ' ¥' + esc(formatCost(costTotal)) + '</span>'
-            +     '<div class="secondary-card__actions">'
-            +       '<button class="btn btn-secondary btn-sm" type="button" data-action="edit-subcard">' + Icons.svg('edit', { size: 14 }) + '<span>编辑</span></button>'
-            +       '<button class="btn btn-secondary btn-sm" type="button" data-action="delete-subcard">' + Icons.svg('trash2', { size: 14 }) + '<span>删除</span></button>'
-            +     '</div>'
             +   '</div>'
             + '</div>';
 
-        card.querySelector('[data-action="edit-subcard"]').addEventListener('click', function () {
-            showSubcardForm({ mode: 'edit', journeyId: journey.id, index: index });
+        function openSubcardEdit() {
+            window.location.href = 'detail.html?id=' + encodeURIComponent(journey.id)
+                + '&sub=' + encodeURIComponent(index) + '&edit=1';
+        }
+        card.addEventListener('click', function (e) {
+            openSubcardEdit();
         });
-        card.querySelector('[data-action="delete-subcard"]').addEventListener('click', function () {
-            deleteSubcard(journey.id, index);
+        card.addEventListener('keydown', function (e) {
+            if (e.target !== card) return;
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openSubcardEdit();
+            }
         });
         return card;
     }
@@ -597,7 +646,7 @@
             story: '',
         };
         const titleId = 'subcard-form-title-' + Date.now();
-        const itineraryTable = normalizeItineraryTable(data.itineraryTable);
+        const itineraryTable = tableForSubcardForm(data);
         const regionType = data.country && data.country !== '中国' ? 'international' : 'domestic';
         const journeyOptions = (typeof journeys !== 'undefined' ? journeys : []).map(function (j) {
             const label = j.province && j.province !== j.city ? j.province + ' · ' + j.city : (j.province || j.city);
@@ -615,15 +664,13 @@
             +     '<div class="form-group"><label for="sub-province">省份/大区</label><input id="sub-province" type="text" value="' + esc(data.province || '') + '"></div>'
             +     '<div class="form-group"><label for="sub-region-type">国内/国外</label><select id="sub-region-type"><option value="domestic"' + (regionType === 'domestic' ? ' selected' : '') + '>国内</option><option value="international"' + (regionType === 'international' ? ' selected' : '') + '>国外</option></select></div>'
             +   '</div>'
-            +   '<div class="form-row">'
-            +     '<div class="form-group"><label for="sub-date">开始日期 *</label><input id="sub-date" type="date" value="' + esc(data.date || '') + '"></div>'
-            +     '<div class="form-group"><label for="sub-endDate">结束日期</label><input id="sub-endDate" type="date" value="' + esc(data.endDate || data.date || '') + '"></div>'
-            +   '</div>'
             +   '<div class="form-row cost-row">'
             +     '<div class="form-group"><label for="sub-cost-package">报团费</label><input id="sub-cost-package" type="number" min="0" value="' + esc(data.cost && data.cost.package || '') + '"></div>'
             +     '<div class="form-group"><label for="sub-cost-transport">交通费</label><input id="sub-cost-transport" type="number" min="0" value="' + esc(data.cost && data.cost.transport || '') + '"></div>'
             +     '<div class="form-group"><label for="sub-cost-accommodation">住宿费</label><input id="sub-cost-accommodation" type="number" min="0" value="' + esc(data.cost && data.cost.accommodation || '') + '"></div>'
             +     '<div class="form-group"><label for="sub-cost-food">餐饮费</label><input id="sub-cost-food" type="number" min="0" value="' + esc(data.cost && data.cost.food || '') + '"></div>'
+            +     '<div class="form-group"><label for="sub-cost-shopping">购物费</label><input id="sub-cost-shopping" type="number" min="0" value="' + esc(data.cost && data.cost.shopping || '') + '"></div>'
+            +     '<div class="form-group"><label for="sub-cost-ticket">门票费</label><input id="sub-cost-ticket" type="number" min="0" value="' + esc(data.cost && data.cost.ticket || '') + '"></div>'
             +   '</div>'
             +   renderItineraryEditorHtml(itineraryTable)
             +   '<div class="form-group"><label for="sub-story">这段行程的故事</label><textarea id="sub-story" rows="4">' + esc(data.story || '') + '</textarea></div>'
@@ -633,13 +680,13 @@
             +   '<button type="button" class="btn btn-primary" data-action="save">' + (isEdit ? '保存' : '添加') + '</button>'
             + '</div>';
 
-        const handle = HsnUI.modal.open(root, { size: 'md', titleId: titleId });
+        const handle = HsnUI.modal.open(root, { size: 'lg', titleId: titleId });
         wireItineraryEditor(root);
         root.querySelector('[data-action="cancel"]').addEventListener('click', function () { handle.close(); });
         root.querySelector('[data-action="save"]').addEventListener('click', function () {
             const subcard = readSubcardForm(root);
             if (!subcard.city || !subcard.date) {
-                HsnUI.toast('城市和开始日期为必填项', 'error');
+                HsnUI.toast('请填写城市和行程表第一行日期', 'error');
                 return;
             }
             if (isEdit && existing && existing.id) {
@@ -690,6 +737,7 @@
             return el ? el.value.trim() : '';
         };
         const itineraryTable = readItineraryEditor(root);
+        const dateRange = dateRangeFromItinerary(itineraryTable);
         const city = get('sub-city');
         const regionType = get('sub-region-type') || 'domestic';
         return {
@@ -698,8 +746,8 @@
             province: get('sub-province'),
             city: city,
             country: regionType === 'international' ? '国外' : '中国',
-            date: get('sub-date'),
-            endDate: get('sub-endDate') || get('sub-date'),
+            date: dateRange.start,
+            endDate: dateRange.end || dateRange.start,
             emoji: get('sub-emoji') || '📍',
             itineraryTable: itineraryTable,
             highlights: highlightsFromItinerary({ itineraryTable: itineraryTable }),
@@ -708,6 +756,8 @@
                 transport: Number(get('sub-cost-transport')) || 0,
                 accommodation: Number(get('sub-cost-accommodation')) || 0,
                 food: Number(get('sub-cost-food')) || 0,
+                shopping: Number(get('sub-cost-shopping')) || 0,
+                ticket: Number(get('sub-cost-ticket')) || 0,
             },
             story: get('sub-story'),
         };

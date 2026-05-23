@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
-<body class="add-page">
+<body class="add-page detail-page is-editing">
     <nav class="navbar">
         <div class="nav-brand">HSN Journey Traces</div>
         <input type="checkbox" id="nav-toggle" class="nav-toggle">
@@ -23,115 +23,65 @@
         </ul>
     </nav>
 
-    <main id="main" class="container" tabindex="-1">
-        <a href="index.html" class="back-link">&larr; 返回首页</a>
-        <h1 class="page-title">添加新旅程</h1>
+    <main id="main" class="container" tabindex="-1" data-mode="edit">
+        <a href="cities.html" class="back-link">&larr; 返回城市足迹</a>
+        <div class="action-bar" id="action-bar">
+            <button class="btn btn-secondary" type="button" id="add-action-edit" disabled><span>编辑</span></button>
+            <button class="btn btn-primary" type="button" id="add-action-save"><span>保存</span></button>
+        </div>
 
-        <article class="add-preview" id="add-preview" aria-live="polite">
-            <div class="add-preview__emoji" id="add-preview-emoji" aria-hidden="true">📍</div>
-            <div class="add-preview__body">
-                <h2 class="add-preview__title" id="add-preview-title">未命名旅程</h2>
-                <p class="add-preview__meta" id="add-preview-meta">填写信息以预览</p>
-            </div>
-        </article>
-
-        <form class="edit-form" id="add-form" novalidate>
-            <section class="form-section" aria-labelledby="sec-basic">
-                <h2 class="form-section__title" id="sec-basic">基本信息</h2>
-                <div class="form-row dense">
+        <form class="edit-form subcard-page-form" id="add-form" novalidate>
+            <section class="form-section">
+                <div class="form-group subcard-parent-field">
+                    <label for="add-parent">归属一级卡片</label>
+                    <select id="add-parent" name="parent">
+                        <option value="new">新建一级卡片</option>
+                    </select>
+                </div>
+                <div class="form-row subcard-page-form__basic">
                     <div class="form-group">
-                        <label for="add-province">省份 / 大区 *</label>
-                        <input type="text" id="add-province" name="province" placeholder="例如：福建" required autocomplete="off">
-                        <span class="form-error" id="err-province" aria-live="polite"></span>
+                        <label for="add-emoji">图标</label>
+                        <input type="text" id="add-emoji" name="emoji" maxlength="4" value="📍" autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label for="add-city">城市 *</label>
-                        <input type="text" id="add-city" name="city" placeholder="例如：厦门" required autocomplete="off">
-                        <span class="form-error" id="err-city" aria-live="polite"></span>
+                        <input type="text" id="add-city" name="city" required autocomplete="off">
                     </div>
                     <div class="form-group">
-                        <label for="add-emoji">封面 Emoji</label>
-                        <input type="text" id="add-emoji" name="emoji" placeholder="例如：🏝️" maxlength="4" autocomplete="off">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="add-name">旅程名称 *</label>
-                    <input type="text" id="add-name" name="name" placeholder="例如：冬日厦门海滨漫游" required autocomplete="off">
-                    <span class="form-hint">留空时将以"省份·城市"自动生成</span>
-                    <span class="form-error" id="err-name" aria-live="polite"></span>
-                </div>
-            </section>
-
-            <section class="form-section" aria-labelledby="sec-time">
-                <h2 class="form-section__title" id="sec-time">时间</h2>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="add-date">开始日期 *</label>
-                        <input type="date" id="add-date" name="date" required>
-                        <span class="form-error" id="err-date" aria-live="polite"></span>
+                        <label for="add-province">省份/大区</label>
+                        <input type="text" id="add-province" name="province" autocomplete="off">
                     </div>
                     <div class="form-group">
-                        <label for="add-endDate">结束日期</label>
-                        <input type="date" id="add-endDate" name="endDate">
-                        <span class="form-hint">未填则与开始日期相同</span>
+                        <label for="add-region-type">国内/国外</label>
+                        <select id="add-region-type" name="region-type">
+                            <option value="domestic" selected>国内</option>
+                            <option value="international">国外</option>
+                        </select>
                     </div>
                 </div>
             </section>
 
-            <section class="form-section" aria-labelledby="sec-cost">
-                <h2 class="form-section__title" id="sec-cost">费用（元）</h2>
-                <div class="form-row dense">
-                    <div class="form-group">
-                        <label for="add-cost-package">报团费</label>
-                        <input type="number" id="add-cost-package" name="package" placeholder="0" min="0" inputmode="numeric">
-                    </div>
-                    <div class="form-group">
-                        <label for="add-cost-transport">交通费</label>
-                        <input type="number" id="add-cost-transport" name="transport" placeholder="0" min="0" inputmode="numeric">
-                    </div>
-                    <div class="form-group">
-                        <label for="add-cost-accommodation">住宿费</label>
-                        <input type="number" id="add-cost-accommodation" name="accommodation" placeholder="0" min="0" inputmode="numeric">
-                    </div>
-                    <div class="form-group">
-                        <label for="add-cost-food">餐饮费</label>
-                        <input type="number" id="add-cost-food" name="food" placeholder="0" min="0" inputmode="numeric">
-                    </div>
+            <section class="form-section">
+                <h2 class="form-section__title">费用</h2>
+                <div class="form-row subcard-page-form__costs">
+                    <div class="form-group"><label for="add-cost-package">报团费</label><input type="number" id="add-cost-package" min="0" inputmode="numeric"></div>
+                    <div class="form-group"><label for="add-cost-transport">交通费</label><input type="number" id="add-cost-transport" min="0" inputmode="numeric"></div>
+                    <div class="form-group"><label for="add-cost-accommodation">住宿费</label><input type="number" id="add-cost-accommodation" min="0" inputmode="numeric"></div>
+                    <div class="form-group"><label for="add-cost-food">餐饮费</label><input type="number" id="add-cost-food" min="0" inputmode="numeric"></div>
+                    <div class="form-group"><label for="add-cost-shopping">购物费</label><input type="number" id="add-cost-shopping" min="0" inputmode="numeric"></div>
+                    <div class="form-group"><label for="add-cost-ticket">门票费</label><input type="number" id="add-cost-ticket" min="0" inputmode="numeric"></div>
                 </div>
             </section>
 
-            <section class="form-section" aria-labelledby="sec-highlights">
-                <h2 class="form-section__title" id="sec-highlights">亮点 &amp; 行程</h2>
-                <div class="form-group">
-                    <label for="add-highlights">景点亮点</label>
-                    <input type="text" id="add-highlights" name="highlights" placeholder="例如：鼓浪屿、厦门大学、南普陀寺" autocomplete="off">
-                    <span class="form-hint">用 、 或 , 分隔多个亮点</span>
-                </div>
-                <p class="form-hint">详细行程可在保存后到旅程详情页中编辑添加。</p>
+            <section class="form-section">
+                <h2 class="form-section__title">行程</h2>
+                <div id="add-itinerary-editor"></div>
             </section>
 
-            <section class="form-section" aria-labelledby="sec-photo">
-                <h2 class="form-section__title" id="sec-photo">封面照片</h2>
-                <div class="photo-input">
-                    <label for="add-photo" class="photo-input__drop" id="add-photo-label">
-                        <span class="photo-input__icon" aria-hidden="true"></span>
-                        <span class="photo-input__text">点击或拖拽上传照片</span>
-                        <span class="photo-input__hint">JPG / PNG · 自动压缩至 1600px</span>
-                    </label>
-                    <input type="file" id="add-photo" name="photo" accept="image/*" hidden>
-                </div>
-                <div class="photo-preview is-hidden" id="add-photo-preview" aria-live="polite">
-                    <img id="add-photo-img" alt="已选择的封面照片">
-                    <button type="button" class="icon-btn icon-btn--sm photo-preview__remove" id="add-photo-remove" aria-label="移除照片"></button>
-                </div>
+            <section class="form-section">
+                <h2 class="form-section__title">这段旅程的故事</h2>
+                <textarea id="add-story" class="journey-story-textarea" rows="5"></textarea>
             </section>
-
-            <div class="sticky-actions">
-                <div class="sticky-actions__inner">
-                    <button type="button" class="btn btn-secondary" id="add-cancel-btn">取消</button>
-                    <button type="submit" class="btn btn-primary" id="add-save-btn">保存旅程</button>
-                </div>
-            </div>
         </form>
     </main>
 

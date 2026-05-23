@@ -46,13 +46,46 @@ const cityCoordinates = [
     { name: "南阳", country: "中国", lat: 32.9908, lng: 112.5283, type: "domestic" }
 ];
 
+function isDomesticLocation(loc) {
+    return !loc.country || loc.country === '中国' || loc.country === '国内';
+}
+
+function hashString(value) {
+    return String(value || '').split('').reduce((hash, char) => {
+        return ((hash << 5) - hash + char.charCodeAt(0)) >>> 0;
+    }, 2166136261);
+}
+
+function estimatedCoordinate(loc) {
+    const key = [loc.name, loc.country || '', loc.province || ''].join('|');
+    const hash = hashString(key);
+    const domestic = isDomesticLocation(loc);
+    const latBase = domestic ? 22 : -45;
+    const lngBase = domestic ? 78 : -170;
+    const latRange = domestic ? 26 : 110;
+    const lngRange = domestic ? 48 : 340;
+    return {
+        name: loc.name,
+        country: loc.country || (domestic ? '中国' : '国外'),
+        lat: latBase + ((hash % 10000) / 10000) * latRange,
+        lng: lngBase + ((((hash / 10000) | 0) % 10000) / 10000) * lngRange,
+        type: domestic ? 'domestic' : 'international',
+        estimated: true
+    };
+}
+
+function resolveCityCoordinate(loc) {
+    const coord = cityCoordinates.find(c => c.name === loc.name);
+    if (coord) return coord;
+    return estimatedCoordinate(loc);
+}
+
 function getMapLocations() {
     const map = {};
     journeys.forEach(j => {
         const locations = generateLocations(j);
         locations.forEach(loc => {
-            const coord = cityCoordinates.find(c => c.name === loc.name);
-            if (!coord) return;
+            const coord = resolveCityCoordinate(loc);
             const key = coord.name;
             if (!map[key]) {
                 map[key] = {
@@ -61,6 +94,7 @@ function getMapLocations() {
                     lat: coord.lat,
                     lng: coord.lng,
                     type: coord.type,
+                    estimated: Boolean(coord.estimated),
                     journeys: []
                 };
             }
@@ -182,6 +216,7 @@ function getMapLocations() {
         return ''
             + '<div class="popup-city">' + esc(city.name) + '</div>'
             + '<div class="popup-country">' + esc(city.country) + '</div>'
+            + (city.estimated ? '<div class="popup-country">自动生成坐标，可后续补充精确位置</div>' : '')
             + '<div class="popup-count">' + city.journeys.length + ' 次旅行</div>'
             + (journeysList ? '<div class="popup-list">' + journeysList + '</div>' : '');
     }

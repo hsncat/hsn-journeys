@@ -63,7 +63,7 @@
         const emojiLabel = esc(j.city || '') + '封面';
 
         return ''
-            + '<a class="journey-card" href="detail.html?id=' + j.id + '">'
+            + '<a class="journey-card" href="cities.html?journey=' + encodeURIComponent(j.id) + '">'
             +   '<div class="card-image" role="img" aria-label="' + emojiLabel + '">' + esc(j.emoji || '📍') + '</div>'
             +   '<div class="card-content">'
             +     '<div class="card-title">' + title + '</div>'

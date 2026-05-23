@@ -188,6 +188,10 @@ a, button, .journey-card, .primary-card, .city-card, .mini-card, .wishlist-card,
     color: var(--color-text-inverse);
 }
 
+.nav-toggle {
+    display: none;
+}
+
 .nav-links {
     display: flex;
     list-style: none;
@@ -1240,6 +1244,17 @@ a, button, .journey-card, .primary-card, .city-card, .mini-card, .wishlist-card,
     border-radius: var(--radius-md);
     padding: var(--space-4);
     box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: border-color var(--dur-fast) var(--ease-out),
+                box-shadow var(--dur-fast) var(--ease-out),
+                transform var(--dur-fast) var(--ease-out);
+}
+
+.secondary-card:hover,
+.secondary-card:focus-visible {
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-1px);
 }
 
 .secondary-card__date {
@@ -1336,9 +1351,111 @@ a, button, .journey-card, .primary-card, .city-card, .mini-card, .wishlist-card,
     overflow-x: auto;
 }
 
+.subcard-form__date-note {
+    margin: var(--space-1) 0 var(--space-3);
+    color: var(--color-text-muted);
+    font-size: var(--fs-sm);
+}
+
 .subcard-form .cost-row {
-    grid-template-columns: repeat(4, minmax(96px, 1fr)) !important;
+    grid-template-columns: repeat(6, minmax(84px, 1fr)) !important;
     overflow-x: auto;
+}
+
+.subcard-page-form__costs {
+    grid-template-columns: repeat(6, minmax(84px, 1fr)) !important;
+    overflow-x: auto;
+}
+
+.subcard-page-form__basic {
+    grid-template-columns: repeat(4, minmax(118px, 1fr)) !important;
+    overflow-x: auto;
+}
+
+.subcard-page-form__basic .form-group,
+.subcard-page-form__costs .form-group {
+    min-width: 0;
+}
+
+.subcard-page-form__basic input,
+.subcard-page-form__basic select,
+.subcard-page-form__costs input {
+    width: 100%;
+    height: var(--input-h);
+}
+
+.subcard-parent-field select {
+    width: 100%;
+}
+
+.journey-story-textarea {
+    display: block;
+    width: 100%;
+    min-height: clamp(180px, 28vh, 360px);
+    max-height: none;
+    resize: vertical;
+    overflow: auto;
+}
+
+.subcard-page-table th,
+.subcard-page-table td {
+    min-width: 128px;
+}
+
+.sub-itinerary-header,
+.sub-itinerary-cell {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-text);
+    font: inherit;
+}
+
+.sub-itinerary-header {
+    min-height: 40px;
+    padding: var(--space-3);
+    font-weight: var(--fw-semibold);
+}
+
+.sub-itinerary-cell {
+    display: block;
+    min-height: 64px;
+    padding: var(--space-3);
+    resize: vertical;
+}
+
+.sub-itinerary-frame {
+    position: relative;
+    min-height: 100%;
+}
+
+.sub-itinerary-col-actions,
+.sub-itinerary-row-actions {
+    position: absolute;
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.sub-itinerary-col-actions {
+    right: 4px;
+    top: 4px;
+}
+
+.sub-itinerary-row-actions {
+    left: 4px;
+    bottom: 4px;
+}
+
+.sub-itinerary-table th:hover .sub-itinerary-col-actions,
+.sub-itinerary-table td:hover .sub-itinerary-row-actions,
+.sub-itinerary-table th:focus-within .sub-itinerary-col-actions,
+.sub-itinerary-table td:focus-within .sub-itinerary-row-actions {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .sub-itinerary-field {
@@ -2769,7 +2886,7 @@ a, button, .journey-card, .primary-card, .city-card, .mini-card, .wishlist-card,
 
 .modal--sm { width: 400px; }
 .modal--md { width: 560px; }
-.modal--lg { width: 720px; }
+.modal--lg { width: min(920px, 92vw); }
 
 .modal__body {
     padding: var(--space-6) var(--space-6) var(--space-4);
