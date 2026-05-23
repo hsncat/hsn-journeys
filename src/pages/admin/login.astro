@@ -1,0 +1,190 @@
+---
+import Layout from '@/components/Layout.astro';
+import { icon } from '@/lib/icons';
+import { getCurrentUser } from '@/server/middleware';
+
+export const prerender = false;
+
+// 如果已经登录，直接跳到后台
+const env = Astro.locals.runtime.env;
+const token = Astro.cookies.get('hsn_session')?.value;
+if (token) {
+  // 通过 verifySession 检查
+  const { verifySession } = await import('@/server/auth');
+  const session = await verifySession(token, env.JWT_SECRET);
+  if (session) return Astro.redirect('/admin');
+}
+
+const errorParam = Astro.url.searchParams.get('error');
+---
+
+<Layout title="管理员登录" noNav>
+  <main class="login-page">
+    <div class="login-card">
+      <a href="/" class="brand">
+        <span class="brand-name">HSN Journey Traces</span>
+        <span class="brand-sub">Admin Console</span>
+      </a>
+      <form id="login-form" autocomplete="on">
+        <label class="field">
+          <span class="label">
+            <Fragment set:html={icon('user', { size: 16 })} />
+            用户名
+          </span>
+          <input id="username" name="username" type="text" required autocomplete="username" />
+        </label>
+        <label class="field">
+          <span class="label">
+            <Fragment set:html={icon('lock', { size: 16 })} />
+            密码
+          </span>
+          <input id="password" name="password" type="password" required autocomplete="current-password" />
+        </label>
+        <p id="login-error" class="error" hidden></p>
+        <button type="submit" class="submit-btn">
+          <span class="submit-label">登录</span>
+        </button>
+      </form>
+      <p class="hint">仅授权管理员可访问 · 公开页面无需登录</p>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  const form = document.getElementById('login-form') as HTMLFormElement;
+  const error = document.getElementById('login-error') as HTMLParagraphElement;
+  const btn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    error.hidden = true;
+    btn.disabled = true;
+    btn.querySelector('.submit-label')!.textContent = '正在登录…';
+
+    const data = {
+      username: (form.elements.namedItem('username') as HTMLInputElement).value,
+      password: (form.elements.namedItem('password') as HTMLInputElement).value,
+    };
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        throw new Error(body.error === 'invalid_credentials' ? '用户名或密码错误' : '登录失败');
+      }
+      window.location.href = '/admin';
+    } catch (err) {
+      error.textContent = err instanceof Error ? err.message : '登录失败';
+      error.hidden = false;
+      btn.disabled = false;
+      btn.querySelector('.submit-label')!.textContent = '登录';
+    }
+  });
+</script>
+
+<style>
+  .login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: radial-gradient(ellipse at top right, rgba(37,99,235,0.06), transparent 60%),
+                radial-gradient(ellipse at bottom left, rgba(24,24,27,0.04), transparent 60%);
+  }
+  .login-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 40px 32px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 24px;
+    box-shadow: 0 24px 48px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+  }
+  .brand {
+    display: block;
+    text-align: center;
+    margin-bottom: 32px;
+    text-decoration: none;
+    color: inherit;
+  }
+  .brand-name {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 36px;
+    color: var(--color-primary);
+    line-height: 1;
+  }
+  .brand-sub {
+    display: block;
+    margin-top: 6px;
+    color: var(--color-text-subtle);
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .field {
+    display: block;
+    margin-bottom: 18px;
+  }
+  .label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    color: var(--color-text-muted);
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .field input {
+    width: 100%;
+    height: 44px;
+    padding: 0 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-surface);
+    font: inherit;
+    color: var(--color-text);
+    transition: border-color 150ms, box-shadow 150ms;
+  }
+  .field input:focus {
+    outline: 0;
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-focus);
+  }
+  .error {
+    margin: 0 0 14px;
+    padding: 10px 14px;
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+    border-radius: 10px;
+    font-size: 13px;
+  }
+  .submit-btn {
+    width: 100%;
+    height: 48px;
+    border: 0;
+    border-radius: 14px;
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    font: inherit;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 200ms var(--ease-out);
+  }
+  .submit-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(24,24,27,0.18);
+  }
+  .submit-btn:disabled { opacity: 0.6; cursor: wait; }
+  .hint {
+    margin: 24px 0 0;
+    color: var(--color-text-subtle);
+    font-size: 12px;
+    text-align: center;
+  }
+</style>

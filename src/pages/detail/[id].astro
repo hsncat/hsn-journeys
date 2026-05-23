@@ -1,0 +1,410 @@
+---
+import Layout from '@/components/Layout.astro';
+import { icon } from '@/lib/icons';
+import { getJourney, type ItineraryTable } from '@/server/db';
+import { fmtDate, fmtDateRange, daysBetween, fmtMoney } from '@/lib/format';
+import { isDomestic } from '@/lib/locations';
+import { totalCost } from '@/lib/itinerary';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime.env;
+const id = Number(Astro.params.id);
+if (!Number.isFinite(id)) return Astro.redirect('/cities');
+
+const journey = await getJourney(env.DB, id);
+if (!journey) return new Response('Not Found', { status: 404 });
+
+const subId = Astro.url.searchParams.get('sub');
+const activeSub = subId
+  ? journey.subCards.find(s => s.id === subId) ?? journey.subCards[0]
+  : journey.subCards[0];
+
+const days = daysBetween(journey.date, journey.endDate);
+const total = totalCost(journey.cost);
+const intl = !isDomestic(journey.country);
+
+interface CostItem { key: string; label: string; value: number; iconName: string }
+const costItems: CostItem[] = [
+  { key: 'package', label: '报团', value: journey.cost.package, iconName: 'package' },
+  { key: 'transport', label: '交通', value: journey.cost.transport, iconName: 'car' },
+  { key: 'accommodation', label: '住宿', value: journey.cost.accommodation, iconName: 'bed' },
+  { key: 'food', label: '餐饮', value: journey.cost.food, iconName: 'utensils' },
+  { key: 'shopping', label: '购物', value: journey.cost.shopping, iconName: 'dollarSign' },
+  { key: 'ticket', label: '门票', value: journey.cost.ticket, iconName: 'dollarSign' },
+];
+const visibleCosts = costItems.filter(c => c.value > 0);
+
+function renderItineraryTable(t: ItineraryTable | null): string {
+  if (!t || !t.headers || t.rows.length === 0) return '';
+  const headRow = '<tr>' + t.headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+  const bodyRows = t.rows.map(row =>
+    '<tr>' + row.map((cell, idx) => `<td class="${idx === 0 ? 'date-col' : ''}">${cell ?? ''}</td>`).join('') + '</tr>'
+  ).join('');
+  return `<table class="itinerary-table"><thead>${headRow}</thead><tbody>${bodyRows}</tbody></table>`;
+}
+---
+
+<Layout title={journey.title} active="cities">
+  <main class="detail">
+    <a class="back-link" href="/cities">
+      <Fragment set:html={icon('arrowLeft', { size: 16 })} />
+      返回城市足迹
+    </a>
+
+    <!-- Hero -->
+    <section class="detail-hero">
+      <div class="hero-emoji" aria-hidden="true">{journey.emoji ?? '🌏'}</div>
+      <div class="hero-text">
+        <span class={`pill ${intl ? 'pill-red' : 'pill-blue'}`}>
+          {intl ? '国际旅程' : '国内旅程'}
+        </span>
+        <h1>{journey.title}</h1>
+        <p class="hero-meta">
+          <span><Fragment set:html={icon('mapPin', { size: 16 })} /> {journey.country} · {journey.city}</span>
+          <span><Fragment set:html={icon('calendar', { size: 16 })} /> {fmtDateRange(journey.date, journey.endDate)}</span>
+          <span><Fragment set:html={icon('compass', { size: 16 })} /> {days}天</span>
+        </p>
+        {journey.description && <p class="hero-desc">{journey.description}</p>}
+      </div>
+    </section>
+
+    {visibleCosts.length > 0 && (
+      <section class="cost-bar">
+        {visibleCosts.map(c => (
+          <div class="cost-item">
+            <span class="cost-icon">
+              <Fragment set:html={icon(c.iconName, { size: 18 })} />
+            </span>
+            <div>
+              <div class="cost-label">{c.label}</div>
+              <div class="cost-value tabular">¥{fmtMoney(c.value)}</div>
+            </div>
+          </div>
+        ))}
+        <div class="cost-item cost-total">
+          <div>
+            <div class="cost-label">合计</div>
+            <div class="cost-value tabular">¥{fmtMoney(total)}</div>
+          </div>
+        </div>
+      </section>
+    )}
+
+    <!-- SubCards tabs -->
+    {journey.subCards.length > 1 && (
+      <section class="sub-tabs" role="tablist">
+        {journey.subCards.map(s => (
+          <a
+            href={`?sub=${encodeURIComponent(s.id)}`}
+            class:list={['sub-tab', activeSub?.id === s.id && 'is-active']}
+            role="tab"
+          >
+            <span class="emoji" aria-hidden="true">{s.emoji ?? '📍'}</span>
+            <span class="sub-tab__name">{s.name}</span>
+            <span class="sub-tab__date">{fmtDate(s.date, { short: true })}</span>
+          </a>
+        ))}
+      </section>
+    )}
+
+    {activeSub && (
+      <section class="sub-content">
+        {journey.subCards.length > 1 && (
+          <h2 class="sub-title">
+            <span aria-hidden="true">{activeSub.emoji ?? '📍'}</span>
+            {activeSub.name}
+            <span class="sub-date-range">· {fmtDateRange(activeSub.date, activeSub.endDate)}</span>
+          </h2>
+        )}
+
+        {activeSub.highlights.length > 0 && (
+          <div class="block">
+            <h3>景点亮点</h3>
+            <div class="highlights">
+              {activeSub.highlights.map(h => <span class="chip-lg">{h}</span>)}
+            </div>
+          </div>
+        )}
+
+        {activeSub.itineraryTable.rows.length > 0 && (
+          <div class="block">
+            <h3>行程安排</h3>
+            <div class="table-wrap" set:html={renderItineraryTable(activeSub.itineraryTable)} />
+          </div>
+        )}
+
+        {activeSub.story && (
+          <div class="block">
+            <h3>旅行故事</h3>
+            <p class="story">{activeSub.story}</p>
+          </div>
+        )}
+
+        {activeSub.photoUrl && (
+          <div class="block">
+            <h3>精彩瞬间</h3>
+            <a href={`/r2/${activeSub.photoUrl}`} target="_blank" rel="noopener" class="photo">
+              <img src={`/r2/${activeSub.photoUrl}`} alt={activeSub.name} loading="lazy" />
+            </a>
+          </div>
+        )}
+      </section>
+    )}
+
+    {journey.story && journey.subCards.length === 1 && (
+      <section class="block">
+        <h3>旅行故事</h3>
+        <p class="story">{journey.story}</p>
+      </section>
+    )}
+  </main>
+</Layout>
+
+<style>
+  .detail {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+  }
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-text-muted);
+    font-size: 14px;
+    text-decoration: none;
+    margin-bottom: 24px;
+    transition: color 200ms;
+  }
+  .back-link:hover { color: var(--color-primary); }
+
+  /* Hero */
+  .detail-hero {
+    display: flex;
+    gap: 28px;
+    margin-bottom: 32px;
+    align-items: flex-start;
+  }
+  .hero-emoji {
+    flex-shrink: 0;
+    width: 120px;
+    height: 120px;
+    border-radius: 28px;
+    background: linear-gradient(135deg, var(--color-accent-soft), var(--color-surface-alt));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 72px;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.05));
+  }
+  .hero-text { flex: 1; min-width: 0; }
+  .pill {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+  .pill-blue { color: var(--color-accent); background: var(--color-accent-soft); }
+  .pill-red { color: var(--color-danger); background: var(--color-danger-soft); }
+  .hero-text h1 {
+    font-size: clamp(40px, 6vw, 60px);
+    margin: 0 0 14px;
+    line-height: 1.1;
+  }
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    color: var(--color-text-muted);
+    font-size: 14px;
+    margin: 0 0 14px;
+  }
+  .hero-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .hero-desc {
+    color: var(--color-text);
+    font-size: 16px;
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  /* Cost Bar */
+  .cost-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    padding: 16px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
+    margin-bottom: 32px;
+  }
+  .cost-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px;
+  }
+  .cost-icon {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--color-surface-alt);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-muted);
+  }
+  .cost-label {
+    font-size: 11px;
+    color: var(--color-text-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .cost-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-primary);
+  }
+  .cost-total .cost-value {
+    color: var(--color-accent);
+  }
+
+  /* Sub tabs */
+  .sub-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+  }
+  .sub-tab {
+    flex: 1;
+    min-width: 120px;
+    padding: 10px 16px;
+    border-radius: 14px;
+    text-align: center;
+    text-decoration: none;
+    color: var(--color-text-muted);
+    transition: all 200ms var(--ease-out);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .sub-tab:hover { color: var(--color-text); background: var(--color-surface-alt); }
+  .sub-tab.is-active {
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+  }
+  .sub-tab .emoji { font-size: 22px; }
+  .sub-tab__name { font-weight: 600; font-size: 14px; }
+  .sub-tab__date { font-size: 11px; opacity: 0.7; }
+
+  /* Sub content */
+  .sub-title {
+    font-family: var(--font-display);
+    font-size: 32px;
+    margin: 16px 0 24px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .sub-date-range {
+    font-size: 16px;
+    font-family: var(--font-body);
+    color: var(--color-text-muted);
+    font-weight: 400;
+  }
+  .block {
+    margin-bottom: 32px;
+  }
+  .block h3 {
+    font-size: 24px;
+    margin: 0 0 14px;
+  }
+  .highlights {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip-lg {
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    font-size: 14px;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+  }
+  .table-wrap :global(.itinerary-table) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .table-wrap :global(.itinerary-table th) {
+    text-align: left;
+    padding: 14px 16px;
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.3px;
+  }
+  .table-wrap :global(.itinerary-table th:first-child) { border-top-left-radius: 14px; }
+  .table-wrap :global(.itinerary-table th:last-child) { border-top-right-radius: 14px; }
+  .table-wrap :global(.itinerary-table td) {
+    padding: 12px 16px;
+    border-top: 1px solid var(--color-border);
+    line-height: 1.6;
+    vertical-align: top;
+  }
+  .table-wrap :global(.itinerary-table .date-col) {
+    color: var(--color-text-muted);
+    font-feature-settings: "tnum" on;
+    white-space: nowrap;
+    width: 110px;
+  }
+
+  .story {
+    color: var(--color-text);
+    line-height: 1.85;
+    font-size: 15px;
+    white-space: pre-wrap;
+    max-width: 65ch;
+  }
+  .photo {
+    display: block;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .photo img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  @media (max-width: 768px) {
+    .detail-hero { flex-direction: column; }
+    .hero-emoji { width: 80px; height: 80px; font-size: 48px; border-radius: 20px; }
+    .sub-tabs { padding: 4px; }
+    .sub-tab { min-width: 100px; padding: 8px 12px; }
+  }
+</style>

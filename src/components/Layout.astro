@@ -1,0 +1,68 @@
+---
+import '@/styles/global.css';
+import Navbar from './Navbar.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+  active?: 'home' | 'cities' | 'map' | 'wishlist';
+  noNav?: boolean;
+}
+
+const { title = 'HSN Journey Traces', description = '用脚步丈量世界，记录每一段旅程', active, noNav } = Astro.props;
+const fullTitle = title === 'HSN Journey Traces' ? title : `${title} · HSN Journey Traces`;
+---
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#18181B" />
+    <meta name="description" content={description} />
+    <title>{fullTitle}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap"
+    />
+  </head>
+  <body>
+    {!noNav && <Navbar active={active} />}
+    <slot />
+    {!noNav && (
+      <footer class="site-footer">
+        <div class="footer-inner">
+          <p>HSN Journey Traces · 用脚步丈量世界</p>
+          <p class="footer-sub">© 2026 · Powered by Cloudflare Workers · D1 · R2</p>
+        </div>
+      </footer>
+    )}
+
+    <style is:global>
+      .site-footer {
+        margin-top: 96px;
+        padding: 48px 24px 64px;
+        text-align: center;
+        color: var(--color-text-muted);
+        border-top: 1px solid var(--color-border);
+        background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.02));
+      }
+      .footer-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .site-footer p {
+        margin: 4px 0;
+        font-size: 14px;
+      }
+      .footer-sub {
+        color: var(--color-text-subtle);
+        font-size: 12px;
+        letter-spacing: 0.3px;
+      }
+    </style>
+  </body>
+</html>

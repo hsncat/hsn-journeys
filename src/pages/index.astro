@@ -1,0 +1,461 @@
+---
+import Layout from '@/components/Layout.astro';
+import { icon } from '@/lib/icons';
+import { listJourneys, listPacking, getSiteSettings } from '@/server/db';
+import { fmtDate, fmtDateRange, daysBetween } from '@/lib/format';
+import { isDomestic } from '@/lib/locations';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime.env;
+const [journeys, packing, settings] = await Promise.all([
+  listJourneys(env.DB),
+  listPacking(env.DB),
+  getSiteSettings(env.DB),
+]);
+
+const cityCount = new Set(
+  journeys.flatMap(j => {
+    if (j.country && j.country.includes('·')) return j.country.split('·').map(s => s.trim());
+    if (j.province && j.province.includes('&')) return j.province.split('&').map(s => s.trim());
+    if (j.city && j.city.includes('&')) return j.city.split('&').map(s => s.trim());
+    return [j.city];
+  })
+).size;
+const journeyCount = journeys.length;
+const photoCount = journeys.filter(j => !!j.photoUrl).length || journeys.reduce((n, j) => n + j.highlights.length, 0);
+
+const recent = [...journeys]
+  .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+  .slice(0, 3);
+
+const heroTitle = settings.hero_title || '探索世界的每一步';
+const heroSub = settings.hero_subtitle || '记录美好生活';
+---
+
+<Layout title="首页" active="home">
+  <main class="home">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-inner">
+        <p class="hero-eyebrow" aria-hidden="true">Journey Traces · 2026</p>
+        <h1 class="hero-title">{heroTitle}</h1>
+        <p class="hero-sub">{heroSub}</p>
+        <div class="hero-actions">
+          <a href="/cities" class="btn-primary">
+            <span>查看我的足迹</span>
+            <Fragment set:html={icon('arrowRight', { size: 18 })} />
+          </a>
+          <a href="/map" class="btn-ghost">
+            <Fragment set:html={icon('mapPinned', { size: 18 })} />
+            <span>足迹地图</span>
+          </a>
+        </div>
+      </div>
+      <div class="hero-glow" aria-hidden="true"></div>
+    </section>
+
+    <!-- Stats -->
+    <section class="stats">
+      <div class="stat-card">
+        <span class="stat-number tabular">{cityCount}</span>
+        <span class="stat-label">足迹城市</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number tabular">{journeyCount}</span>
+        <span class="stat-label">旅行记录</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number tabular">{photoCount}</span>
+        <span class="stat-label">精彩瞬间</span>
+      </div>
+    </section>
+
+    <!-- Recent journeys -->
+    <section class="recent">
+      <header class="section-header">
+        <h2>最近旅程</h2>
+        <a href="/cities" class="section-more">
+          <span>查看全部</span>
+          <Fragment set:html={icon('arrowRight', { size: 16 })} />
+        </a>
+      </header>
+      <div class="recent-grid">
+        {recent.map(j => (
+          <a href={`/detail/${j.id}`} class="journey-card">
+            <div class="journey-card__cover">
+              {j.photoUrl ? (
+                <img src={`/r2/${j.photoUrl}`} alt={j.title} loading="lazy" />
+              ) : (
+                <span class="emoji" aria-hidden="true">{j.emoji ?? '🌏'}</span>
+              )}
+              <span class={`pill ${isDomestic(j.country) ? 'pill-blue' : 'pill-red'}`}>
+                {isDomestic(j.country) ? '国内' : '国际'}
+              </span>
+            </div>
+            <div class="journey-card__body">
+              <h3>{j.title || `${j.province} · ${j.city}`}</h3>
+              <div class="journey-card__meta">
+                <span>
+                  <Fragment set:html={icon('mapPin', { size: 14 })} />
+                  {j.city}
+                </span>
+                <span>
+                  <Fragment set:html={icon('calendar', { size: 14 })} />
+                  {fmtDateRange(j.date, j.endDate)}
+                </span>
+                <span>
+                  <Fragment set:html={icon('compass', { size: 14 })} />
+                  {daysBetween(j.date, j.endDate)}天
+                </span>
+              </div>
+              {j.highlights.length > 0 && (
+                <div class="journey-card__chips">
+                  {j.highlights.slice(0, 4).map(h => <span class="chip">{h}</span>)}
+                </div>
+              )}
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <!-- Packing list -->
+    {packing.length > 0 && (
+      <section class="packing">
+        <details>
+          <summary>
+            <h2><span aria-hidden="true">🧳</span> 行李清单</h2>
+            <Fragment set:html={icon('chevronDown', { size: 20, className: 'chevron' })} />
+          </summary>
+          <div class="packing-table-wrap">
+            <table class="packing-table">
+              <thead>
+                <tr>
+                  <th>项目</th>
+                  <th>备注</th>
+                </tr>
+              </thead>
+              <tbody>
+                {packing.map(p => (
+                  <tr>
+                    <td>
+                      {p.item}
+                      {p.is_overseas_only === 1 && <span class="badge-overseas">出国</span>}
+                    </td>
+                    <td>{p.note ?? ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+    )}
+  </main>
+</Layout>
+
+<style>
+  .home {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .hero {
+    position: relative;
+    padding: 96px 0 64px;
+    text-align: center;
+    overflow: hidden;
+  }
+  .hero-glow {
+    position: absolute;
+    inset: -100px;
+    background: radial-gradient(ellipse at top, rgba(37, 99, 235, 0.10), transparent 60%);
+    pointer-events: none;
+    z-index: -1;
+  }
+  .hero-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    font-size: 12px;
+    color: var(--color-text-subtle);
+    margin: 0 0 12px;
+  }
+  .hero-title {
+    font-family: var(--font-display);
+    font-size: clamp(48px, 8vw, 84px);
+    line-height: 1.1;
+    color: var(--color-primary);
+    margin: 0;
+  }
+  .hero-sub {
+    margin: 12px 0 32px;
+    font-size: 18px;
+    color: var(--color-text-muted);
+  }
+  .hero-actions {
+    display: inline-flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn-primary, .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 48px;
+    padding: 0 22px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 15px;
+    text-decoration: none;
+    transition: all 200ms var(--ease-out);
+    border: 1px solid transparent;
+  }
+  .btn-primary {
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    box-shadow: 0 8px 24px rgba(24, 24, 27, 0.18), 0 2px 6px rgba(24, 24, 27, 0.12);
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 32px rgba(24, 24, 27, 0.24), 0 4px 8px rgba(24, 24, 27, 0.14);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-primary);
+    border-color: var(--color-border-strong);
+  }
+  .btn-ghost:hover {
+    background: var(--color-surface);
+    border-color: var(--color-primary);
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin: 32px 0 64px;
+  }
+  .stat-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 32px 16px;
+    text-align: center;
+    transition: all 200ms var(--ease-out);
+  }
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card);
+    border-color: var(--color-border-strong);
+  }
+  .stat-number {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 56px;
+    font-weight: 600;
+    color: var(--color-primary);
+    line-height: 1;
+  }
+  .stat-label {
+    display: block;
+    margin-top: 8px;
+    color: var(--color-text-muted);
+    font-size: 14px;
+    letter-spacing: 0.5px;
+  }
+  @media (max-width: 640px) {
+    .stats { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .stat-card { padding: 24px 8px; }
+    .stat-number { font-size: 40px; }
+  }
+
+  .section-header {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    margin: 0 0 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .section-header h2 {
+    font-size: 36px;
+    margin: 0;
+  }
+  .section-more {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 200ms;
+  }
+  .section-more:hover { color: var(--color-accent); }
+
+  .recent-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 96px;
+  }
+  @media (max-width: 1024px) { .recent-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .recent-grid { grid-template-columns: 1fr; } }
+
+  .journey-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    transition: all 250ms var(--ease-out);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .journey-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.06), 0 16px 36px rgba(0,0,0,0.08);
+    border-color: rgba(24, 24, 27, 0.12);
+  }
+  .journey-card__cover {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    background: linear-gradient(135deg, #EFF6FF 0%, #F4F4F5 50%, #FAFAFA 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .journey-card__cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .journey-card__cover .emoji {
+    font-size: 72px;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.06));
+  }
+  .pill {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(8px);
+  }
+  .pill-blue { color: var(--color-accent); }
+  .pill-red { color: var(--color-danger); }
+
+  .journey-card__body {
+    padding: 18px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .journey-card__body h3 {
+    font-size: 24px;
+    margin: 0;
+    line-height: 1.2;
+  }
+  .journey-card__meta {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    color: var(--color-text-muted);
+    font-size: 13px;
+  }
+  .journey-card__meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .journey-card__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .chip {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--color-surface-alt);
+    font-size: 12px;
+    color: var(--color-text-muted);
+  }
+
+  /* Packing */
+  .packing {
+    margin: 64px 0 32px;
+  }
+  .packing details {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .packing summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+  }
+  .packing summary::-webkit-details-marker { display: none; }
+  .packing summary h2 {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 28px;
+    margin: 0;
+  }
+  .packing summary :global(.chevron) {
+    color: var(--color-text-muted);
+    transition: transform 200ms var(--ease-out);
+  }
+  .packing details[open] summary :global(.chevron) { transform: rotate(180deg); }
+  .packing-table-wrap {
+    padding: 0 24px 20px;
+    overflow-x: auto;
+  }
+  .packing-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .packing-table th {
+    text-align: left;
+    padding: 12px 16px;
+    color: var(--color-text-muted);
+    font-weight: 500;
+    background: var(--color-surface-alt);
+    border-radius: 8px;
+  }
+  .packing-table th:first-child { width: 32%; }
+  .packing-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: top;
+    line-height: 1.6;
+  }
+  .packing-table tr:last-child td { border-bottom: 0; }
+  .badge-overseas {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 2px 8px;
+    background: var(--color-warning-soft);
+    color: var(--color-warning);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+</style>

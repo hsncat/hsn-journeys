@@ -1,0 +1,241 @@
+{
+  "_note": "示例 seed 数据。运行 `pnpm seed:gen` 会读取本文件生成 migrations/0002_seed.sql。你可以直接修改本文件、或者复制为 data/seed.json 来维护私有数据（seed.ts 会优先读取 seed.json）。",
+
+  "journeys": [
+    {
+      "id": 1,
+      "province": "北京",
+      "city": "北京",
+      "country": "中国",
+      "date": "2026-04-01",
+      "endDate": "2026-04-03",
+      "title": "春日北京漫步",
+      "emoji": "🏯",
+      "description": "三天两晚北京经典路线，故宫、长城、什刹海。",
+      "highlights": ["故宫", "八达岭长城", "什刹海", "南锣鼓巷"],
+      "story": "春日的北京，柳絮飞舞。第一天走完中轴线，第二天上长城远眺燕山，第三天在胡同里慢悠悠晃了一整天。",
+      "cost": { "package": 0, "transport": 1200, "accommodation": 800, "food": 600, "shopping": 0, "ticket": 240 },
+      "photo": "",
+      "subCards": [
+        {
+          "id": "sub-1-1",
+          "name": "北京",
+          "province": "北京",
+          "city": "北京",
+          "country": "中国",
+          "date": "2026-04-01",
+          "endDate": "2026-04-03",
+          "emoji": "🏯",
+          "highlights": ["故宫", "八达岭长城", "什刹海", "南锣鼓巷"],
+          "itineraryTable": {
+            "headers": ["日期", "上午", "下午", "备注"],
+            "rows": [
+              ["2026-04-01", "故宫博物院", "景山公园 · 什刹海", "高铁抵达，入住前门附近"],
+              ["2026-04-02", "八达岭长城", "鸟巢 · 水立方", "包车一日游"],
+              ["2026-04-03", "雍和宫", "南锣鼓巷 · 国子监", "傍晚返程"]
+            ]
+          },
+          "cost": { "package": 0, "transport": 1200, "accommodation": 800, "food": 600, "shopping": 0, "ticket": 240 },
+          "story": "",
+          "photo": ""
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "province": "四川&重庆",
+      "city": "成都&重庆",
+      "country": "中国",
+      "date": "2026-03-15",
+      "endDate": "2026-03-20",
+      "title": "川渝美食六日",
+      "emoji": "🌶️",
+      "description": "成都的悠闲、重庆的火辣，六天吃个够。",
+      "highlights": ["宽窄巷子", "锦里", "洪崖洞", "磁器口", "解放碑火锅"],
+      "story": "",
+      "cost": { "package": 0, "transport": 1800, "accommodation": 1400, "food": 1600, "shopping": 400, "ticket": 200 },
+      "photo": "",
+      "subCards": [
+        {
+          "id": "sub-2-1",
+          "name": "成都",
+          "province": "四川",
+          "city": "成都",
+          "country": "中国",
+          "date": "2026-03-15",
+          "endDate": "2026-03-17",
+          "emoji": "🐼",
+          "highlights": ["大熊猫基地", "宽窄巷子", "锦里", "春熙路"],
+          "itineraryTable": {
+            "headers": ["日期", "上午", "下午", "备注"],
+            "rows": [
+              ["2026-03-15", "大熊猫繁育基地", "宽窄巷子", "晚上吃串串"],
+              ["2026-03-16", "锦里", "春熙路 · IFS", "夜爬望江楼"],
+              ["2026-03-17", "杜甫草堂", "动车前往重庆", ""]
+            ]
+          },
+          "cost": { "package": 0, "transport": 800, "accommodation": 700, "food": 800, "shopping": 200, "ticket": 100 },
+          "story": "",
+          "photo": ""
+        },
+        {
+          "id": "sub-2-2",
+          "name": "重庆",
+          "province": "重庆",
+          "city": "重庆",
+          "country": "中国",
+          "date": "2026-03-17",
+          "endDate": "2026-03-20",
+          "emoji": "🌶️",
+          "highlights": ["洪崖洞", "磁器口", "解放碑", "李子坝轻轨"],
+          "itineraryTable": {
+            "headers": ["日期", "上午", "下午", "备注"],
+            "rows": [
+              ["2026-03-17", "抵达重庆 · 解放碑", "洪崖洞", "晚上看夜景"],
+              ["2026-03-18", "磁器口古镇", "李子坝穿楼轻轨", "晚上吃九宫格"],
+              ["2026-03-19", "鹅岭二厂", "南山一棵树", ""],
+              ["2026-03-20", "返程", "", "中午高铁"]
+            ]
+          },
+          "cost": { "package": 0, "transport": 1000, "accommodation": 700, "food": 800, "shopping": 200, "ticket": 100 },
+          "story": "",
+          "photo": ""
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "province": "东亚",
+      "city": "东京",
+      "country": "日本·韩国",
+      "date": "2026-05-01",
+      "endDate": "2026-05-07",
+      "title": "日韩双城七日游",
+      "emoji": "🌸",
+      "description": "东京赏樱 + 首尔购物，跨国一周。",
+      "highlights": ["浅草寺", "涩谷十字路口", "明洞", "景福宫"],
+      "story": "",
+      "cost": { "package": 12000, "transport": 0, "accommodation": 0, "food": 1500, "shopping": 3200, "ticket": 800 },
+      "photo": "",
+      "subCards": [
+        {
+          "id": "sub-3-1",
+          "name": "日本",
+          "province": "东京",
+          "city": "东京",
+          "country": "日本",
+          "date": "2026-05-01",
+          "endDate": "2026-05-04",
+          "emoji": "🌸",
+          "highlights": ["浅草寺", "明治神宫", "涩谷十字路口", "新宿御苑"],
+          "itineraryTable": {
+            "headers": ["日期", "上午", "下午", "备注"],
+            "rows": [
+              ["2026-05-01", "抵达成田", "浅草寺 · 晴空塔", ""],
+              ["2026-05-02", "明治神宫 · 原宿", "涩谷 · 表参道", ""],
+              ["2026-05-03", "新宿御苑赏樱", "歌舞伎町 · 一兰", ""],
+              ["2026-05-04", "上野公园", "前往首尔", "傍晚航班"]
+            ]
+          },
+          "cost": { "package": 7000, "transport": 0, "accommodation": 0, "food": 900, "shopping": 1800, "ticket": 500 },
+          "story": "",
+          "photo": ""
+        },
+        {
+          "id": "sub-3-2",
+          "name": "韩国",
+          "province": "首尔",
+          "city": "首尔",
+          "country": "韩国",
+          "date": "2026-05-04",
+          "endDate": "2026-05-07",
+          "emoji": "🇰🇷",
+          "highlights": ["景福宫", "明洞", "弘大", "南山首尔塔"],
+          "itineraryTable": {
+            "headers": ["日期", "上午", "下午", "备注"],
+            "rows": [
+              ["2026-05-04", "抵达仁川", "明洞夜市", ""],
+              ["2026-05-05", "景福宫", "三清洞 · 仁寺洞", ""],
+              ["2026-05-06", "弘大", "南山首尔塔", ""],
+              ["2026-05-07", "免税店", "返程", ""]
+            ]
+          },
+          "cost": { "package": 5000, "transport": 0, "accommodation": 0, "food": 600, "shopping": 1400, "ticket": 300 },
+          "story": "",
+          "photo": ""
+        }
+      ]
+    }
+  ],
+
+  "wishlist": [
+    {
+      "title": "冰岛极光之旅",
+      "city": "冰岛",
+      "emoji": "🌌",
+      "season": "冬季",
+      "duration": "8天",
+      "description": "黄金圈环线、蓝湖温泉、追极光",
+      "highlights": ["黄金圈", "蓝湖", "极光", "瓦特纳冰川"]
+    },
+    {
+      "title": "新西兰南北岛环游",
+      "city": "新西兰",
+      "emoji": "🏔️",
+      "season": "11-3月",
+      "duration": "12-15天",
+      "description": "皇后镇、米尔福德峡湾、霍比屯",
+      "highlights": ["皇后镇", "米尔福德峡湾", "霍比屯", "蒂卡波湖"]
+    },
+    {
+      "title": "西藏深度游",
+      "city": "西藏",
+      "emoji": "🏔️",
+      "season": "夏季",
+      "duration": "10天",
+      "description": "拉萨、林芝、纳木错、珠峰大本营",
+      "highlights": ["布达拉宫", "纳木错", "羊湖", "珠峰大本营"]
+    },
+    {
+      "title": "希腊爱琴海",
+      "city": "希腊",
+      "emoji": "🇬🇷",
+      "season": "5-9月",
+      "duration": "7天",
+      "description": "雅典卫城、圣托里尼蓝白小镇、米克诺斯",
+      "highlights": ["雅典卫城", "圣托里尼", "米克诺斯", "扎金索斯"]
+    }
+  ],
+
+  "coords": [
+    { "name": "北京", "country": "中国", "lat": 39.9042, "lng": 116.4074, "type": "domestic" },
+    { "name": "成都", "country": "中国", "lat": 30.5728, "lng": 104.0668, "type": "domestic" },
+    { "name": "重庆", "country": "中国", "lat": 29.5628, "lng": 106.5528, "type": "domestic" },
+    { "name": "上海", "country": "中国", "lat": 31.2304, "lng": 121.4737, "type": "domestic" },
+    { "name": "广州", "country": "中国", "lat": 23.1291, "lng": 113.2644, "type": "domestic" },
+    { "name": "东京", "country": "日本", "lat": 35.6762, "lng": 139.6503, "type": "international" },
+    { "name": "首尔", "country": "韩国", "lat": 37.5665, "lng": 126.9780, "type": "international" },
+    { "name": "巴黎", "country": "法国", "lat": 48.8566, "lng": 2.3522, "type": "international" },
+    { "name": "纽约", "country": "美国", "lat": 40.7128, "lng": -74.0060, "type": "international" },
+    { "name": "雷克雅未克", "country": "冰岛", "lat": 64.1466, "lng": -21.9426, "type": "international" }
+  ],
+
+  "packing": [
+    { "item": "身份证 / 护照 / 签证", "note": "护照确保 6 个月有效期", "is_overseas_only": 0 },
+    { "item": "机票 / 火车票", "note": "电子凭证保存到手机", "is_overseas_only": 0 },
+    { "item": "酒店预订单", "note": "建议提前打印一份纸质版", "is_overseas_only": 0 },
+    { "item": "电子支付与货币", "note": "信用卡、外币现金、手机支付", "is_overseas_only": 0 },
+    { "item": "手机 / 流量卡 / 翻译软件", "note": "境外提前购买流量卡或租 Wi-Fi", "is_overseas_only": 1 },
+    { "item": "充电宝 / 数据线 / 转换插头", "note": "充电宝 100Wh 以下可携带，转换插头看目的地", "is_overseas_only": 0 },
+    { "item": "衣物", "note": "按天数 + 1 套备用，注意当地温差", "is_overseas_only": 0 },
+    { "item": "洗漱护肤", "note": "100ml 以下分装瓶可登机", "is_overseas_only": 0 },
+    { "item": "常备药品", "note": "感冒药、肠胃药、晕车药、创可贴", "is_overseas_only": 0 },
+    { "item": "雨伞 / 防晒霜 / 墨镜", "note": "按季节准备", "is_overseas_only": 0 }
+  ],
+
+  "settings": {
+    "hero_title": "探索世界的每一步",
+    "hero_subtitle": "记录每一段值得回味的旅程",
+    "footer_text": "HSN Journey Traces · 用脚步丈量世界"
+  }
+}
