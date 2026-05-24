@@ -83,7 +83,9 @@ function searchTokens(j: JourneyDTO): string {
             >
               <details>
                 <summary class="primary-card">
-                  <div class="primary-emoji" aria-hidden="true">{j.emoji ?? '🌏'}</div>
+                  <div class:list={['primary-emoji', j.photoUrl && 'has-photo']} aria-hidden="true">
+                    {j.photoUrl ? <img src={`/r2/${j.photoUrl}`} alt="" loading="lazy" /> : '📍'}
+                  </div>
                   <div class="primary-content">
                     <div class="primary-head">
                       <h3 class="primary-title">{j.title || `${j.province} · ${j.city}`}</h3>
@@ -143,7 +145,7 @@ function searchTokens(j: JourneyDTO): string {
                             </div>
                             <div class="subcard__main">
                               <h4>
-                                <span class="emoji" aria-hidden="true">{s.emoji ?? '📍'}</span>
+                                <span class="emoji" aria-hidden="true">📍</span>
                                 {s.name}
                               </h4>
                               {(s.highlights || []).length > 0 && (
@@ -474,6 +476,17 @@ function searchTokens(j: JourneyDTO): string {
     justify-content: center;
     font-size: 44px;
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.04));
+    overflow: hidden;
+  }
+  .primary-emoji.has-photo {
+    background: var(--color-surface);
+    font-size: 0;
+  }
+  .primary-emoji img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
   }
   .primary-content { min-width: 0; }
   .primary-head {

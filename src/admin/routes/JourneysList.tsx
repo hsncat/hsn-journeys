@@ -139,7 +139,13 @@ export default function JourneysList() {
                       />
                     </td>
                   )}
-                  <td style={{ fontSize: 28, textAlign: 'center' }}>📍</td>
+                  <td style={{ textAlign: 'center' }}>
+                    {j.photoUrl ? (
+                      <img className="admin-cover-thumb" src={`/r2/${j.photoUrl}`} alt="" />
+                    ) : (
+                      <span style={{ fontSize: 28 }}>📍</span>
+                    )}
+                  </td>
                   <td>
                     <Link to={`/journeys/${j.id}`} style={{ color: 'inherit', textDecoration: 'none', fontWeight: 600 }}>
                       {j.title}

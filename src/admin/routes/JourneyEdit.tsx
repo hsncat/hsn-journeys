@@ -267,7 +267,7 @@ export default function JourneyEdit({ mode }: Props) {
             </thead>
             <tbody>
               <tr>
-                <td style={{ fontSize: 24, textAlign: 'center' }}>{autoJourney.emoji ?? '📍'}</td>
+                <td style={{ fontSize: 24, textAlign: 'center' }}>📍</td>
                 <td>
                   <button
                     type="button"
@@ -335,7 +335,7 @@ export default function JourneyEdit({ mode }: Props) {
               <tbody>
                 {j.subCards.map(s => (
                   <tr key={s.id}>
-                    <td style={{ fontSize: 24, textAlign: 'center' }}>{s.emoji ?? '📍'}</td>
+                    <td style={{ fontSize: 24, textAlign: 'center' }}>📍</td>
                     <td>
                       <Link to={`/journeys/${id}/sub/${encodeURIComponent(s.id)}`} style={{ color: 'inherit', textDecoration: 'none', fontWeight: 600 }}>
                         {s.name}
