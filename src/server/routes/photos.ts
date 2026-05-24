@@ -15,7 +15,7 @@ photos.post('/', requireAdmin, async (c) => {
   const folder = (form.get('folder') as string | null) || 'journeys';
 
   if (!(file instanceof File)) return c.json({ error: 'missing_file' }, 400);
-  if (file.size > 8 * 1024 * 1024) return c.json({ error: 'too_large' }, 413);
+  if (file.size > 30 * 1024 * 1024) return c.json({ error: 'too_large' }, 413);
   if (!file.type.startsWith('image/')) return c.json({ error: 'not_image' }, 415);
 
   const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';

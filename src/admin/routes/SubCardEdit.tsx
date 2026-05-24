@@ -7,7 +7,7 @@ import type { JourneyDTO, SubCardDTO } from '@/server/db';
 import { emptyCost, emptyItinerary } from '@/server/db';
 import { toast } from '../components/Toast';
 import ItineraryEditor from '../components/ItineraryEditor';
-import PhotoUploader from '../components/PhotoUploader';
+import SubCardPhotoGallery from '../components/SubCardPhotoGallery';
 import CostFields from '../components/CostFields';
 import { dateRangeFromItinerary } from '@/lib/itinerary';
 
@@ -28,6 +28,7 @@ const blankSub = (journeyId: number): SubCardDTO => ({
   itineraryTable: emptyItinerary(),
   cost: emptyCost(),
   photoUrl: null,
+  photoUrls: [],
   sortOrder: 0,
 });
 
@@ -119,6 +120,7 @@ export default function SubCardEdit({ mode }: Props) {
           itineraryTable: s.itineraryTable,
           cost: s.cost,
           photoUrl: s.photoUrl,
+          photoUrls: s.photoUrls,
         });
         toast('已创建', 'success');
         navigate(`/journeys/${journeyId}`);
@@ -137,6 +139,7 @@ export default function SubCardEdit({ mode }: Props) {
           itineraryTable: s.itineraryTable,
           cost: s.cost,
           photoUrl: s.photoUrl,
+          photoUrls: s.photoUrls,
         });
         toast('已保存', 'success');
         // 如果转移到新 journey
@@ -233,7 +236,12 @@ export default function SubCardEdit({ mode }: Props) {
 
       <div className="admin-card">
         <h2>照片</h2>
-        <PhotoUploader value={s.photoUrl} onChange={key => update('photoUrl', key)} folder={`sub-cards/${s.id || 'new'}`} />
+        <SubCardPhotoGallery
+          photos={s.photoUrls}
+          cover={s.photoUrl}
+          folder={`sub-cards/${s.id || 'new'}`}
+          onChange={(photoUrls, photoUrl) => setS(prev => ({ ...prev, photoUrls, photoUrl }))}
+        />
       </div>
 
       <div className="admin-card">

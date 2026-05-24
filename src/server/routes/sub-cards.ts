@@ -45,10 +45,11 @@ interface SubCardBody {
   itineraryTable?: { headers: string[]; rows: (string | number)[][] };
   cost?: Record<string, number>;
   photoUrl?: string | null;
+  photoUrls?: string[];
   sortOrder?: number;
 }
 
-async function resyncJourney(db: D1Database, journeyId: number) {
+async function resyncJourney(db: D1Database, journeyId: number, preferredPhotoUrl?: string) {
   const j = await getJourney(db, journeyId);
   if (!j) return;
   const agg = aggregateFromSubCards(j.subCards, j);
@@ -68,7 +69,7 @@ async function resyncJourney(db: D1Database, journeyId: number) {
     agg.emoji ?? j.emoji,
     JSON.stringify(agg.highlights ?? j.highlights),
     JSON.stringify(agg.cost ?? j.cost),
-    agg.photoUrl ?? j.photoUrl,
+    preferredPhotoUrl ?? agg.photoUrl ?? j.photoUrl,
     journeyId,
   ).run();
 }
@@ -85,8 +86,8 @@ subCards.post('/', requireAdmin, async (c) => {
   const itin = normalizeItineraryTable(body.itineraryTable ?? emptyItinerary());
 
   await c.env.DB.prepare(
-    `INSERT INTO sub_cards (id, journey_id, name, province, city, country, date, end_date, emoji, story, highlights_json, itinerary_table_json, cost_json, photo_url, sort_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO sub_cards (id, journey_id, name, province, city, country, date, end_date, emoji, story, highlights_json, itinerary_table_json, cost_json, photo_url, photo_urls_json, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     id, body.journeyId, body.name,
     body.province ?? null,
@@ -100,10 +101,11 @@ subCards.post('/', requireAdmin, async (c) => {
     JSON.stringify(itin),
     JSON.stringify(cost),
     body.photoUrl ?? null,
+    JSON.stringify(normalizePhotoUrls(body.photoUrls, body.photoUrl ?? null)),
     body.sortOrder ?? 0,
   ).run();
 
-  await resyncJourney(c.env.DB, body.journeyId);
+  await resyncJourney(c.env.DB, body.journeyId, body.photoUrl ?? undefined);
 
   const row = await c.env.DB.prepare('SELECT * FROM sub_cards WHERE id = ?').bind(id).first<SubCardRow>();
   return c.json({ subCard: row ? subCardRowToDTO(row) : null }, 201);
@@ -135,6 +137,7 @@ subCards.put('/:id', requireAdmin, async (c) => {
       itinerary_table_json = COALESCE(?, itinerary_table_json),
       cost_json = COALESCE(?, cost_json),
       photo_url = ?,
+      photo_urls_json = COALESCE(?, photo_urls_json),
       sort_order = COALESCE(?, sort_order),
       updated_at = datetime('now')
      WHERE id = ?`
@@ -152,12 +155,13 @@ subCards.put('/:id', requireAdmin, async (c) => {
     itin ? JSON.stringify(itin) : null,
     cost ? JSON.stringify(cost) : null,
     body.photoUrl === undefined ? existing.photo_url : body.photoUrl,
+    body.photoUrls ? JSON.stringify(normalizePhotoUrls(body.photoUrls, body.photoUrl === undefined ? existing.photo_url : body.photoUrl)) : null,
     body.sortOrder ?? null,
     id,
   ).run();
 
   const newJourneyId = body.journeyId ?? oldJourneyId;
-  await resyncJourney(c.env.DB, newJourneyId);
+  await resyncJourney(c.env.DB, newJourneyId, body.photoUrl ?? undefined);
   if (newJourneyId !== oldJourneyId) await resyncJourney(c.env.DB, oldJourneyId);
 
   const row = await c.env.DB.prepare('SELECT * FROM sub_cards WHERE id = ?').bind(id).first<SubCardRow>();
@@ -175,3 +179,9 @@ subCards.delete('/:id', requireAdmin, async (c) => {
 });
 
 export default subCards;
+
+function normalizePhotoUrls(urls: string[] | undefined, cover: string | null): string[] {
+  const list = (urls ?? []).map(s => String(s).trim()).filter(Boolean);
+  if (cover && !list.includes(cover)) list.unshift(cover);
+  return [...new Set(list)].slice(0, 10);
+}

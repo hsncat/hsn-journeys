@@ -52,11 +52,11 @@ function AppShell({ username }: Props) {
           <NavLink to="/wishlist" className={({ isActive }) => isActive ? 'is-active' : ''}>
             <span>💭</span> 心愿单
           </NavLink>
-          <NavLink to="/coords" className={({ isActive }) => isActive ? 'is-active' : ''}>
-            <span>📍</span> 城市坐标
-          </NavLink>
           <NavLink to="/packing" className={({ isActive }) => isActive ? 'is-active' : ''}>
             <span>🧳</span> 行李清单
+          </NavLink>
+          <NavLink to="/coords" className={({ isActive }) => isActive ? 'is-active' : ''}>
+            <span>📍</span> 城市坐标
           </NavLink>
         </nav>
         <div className="admin-user">

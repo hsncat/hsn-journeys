@@ -92,8 +92,8 @@ journeys.post('/', requireAdmin, async (c) => {
       ? `sub-${result.id}-default`
       : `sub-${result.id}-${index + 1}`;
     await c.env.DB.prepare(
-      `INSERT INTO sub_cards (id, journey_id, name, province, city, country, date, end_date, emoji, story, highlights_json, itinerary_table_json, cost_json, photo_url, sort_order)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO sub_cards (id, journey_id, name, province, city, country, date, end_date, emoji, story, highlights_json, itinerary_table_json, cost_json, photo_url, photo_urls_json, sort_order)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       subId,
       result.id,
@@ -109,6 +109,7 @@ journeys.post('/', requireAdmin, async (c) => {
       JSON.stringify(itin),
       JSON.stringify(subCost),
       sub.photoUrl ?? body.photoUrl ?? null,
+      JSON.stringify([sub.photoUrl ?? body.photoUrl].filter(Boolean).slice(0, 10)),
       sub.sortOrder ?? index,
     ).run();
   }

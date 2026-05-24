@@ -27,6 +27,13 @@ export default function ItineraryEditor({ value, onChange }: Props) {
     const newRows = normalizedRows(rows, headers.length);
     while (newRows.length <= r) newRows.push(headers.map(() => ''));
     newRows[r][c] = val;
+    if (r === 0 && isDateColumn(c) && isFullDate(val)) {
+      for (let i = 1; i < newRows.length; i++) {
+        if (!String(newRows[i][c] ?? '').trim()) {
+          newRows[i][c] = dateOffset(val, i);
+        }
+      }
+    }
     update({ rows: newRows });
   };
 
@@ -38,7 +45,14 @@ export default function ItineraryEditor({ value, onChange }: Props) {
 
   const addRow = (after = rows.length - 1) => {
     const next = normalizedRows(rows, headers.length);
-    next.splice(Math.max(0, after + 1), 0, headers.map(() => ''));
+    const insertAt = Math.max(0, after + 1);
+    const row = headers.map(() => '');
+    const dateCol = headers.findIndex((h, idx) => isDateColumn(idx));
+    if (dateCol >= 0) {
+      const firstDate = String(next[0]?.[dateCol] ?? '');
+      if (isFullDate(firstDate)) row[dateCol] = dateOffset(firstDate, insertAt);
+    }
+    next.splice(insertAt, 0, row);
     update({ rows: next });
   };
 
@@ -136,7 +150,7 @@ export default function ItineraryEditor({ value, onChange }: Props) {
             {visibleRows.map((row, ri) => (
               <tr key={ri} onMouseEnter={e => showRowControls(ri, e.currentTarget)}>
                 {headers.map((_, ci) => {
-                  const isDate = ci === 0 || headers[ci] === '日期';
+                  const isDate = isDateColumn(ci);
                   const cell = String(row[ci] ?? '');
                   return (
                     <td key={ci}>
@@ -206,4 +220,20 @@ function normalizeDate(s: string): string {
   const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   if (!m) return s;
   return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+}
+
+function dateOffset(start: string, offset: number): string {
+  const normalized = normalizeDate(start);
+  if (!isFullDate(normalized)) return '';
+  const d = new Date(`${normalized}T00:00:00`);
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().slice(0, 10);
+}
+
+function isDateColumn(index: number): boolean {
+  return index === 0;
+}
+
+function isFullDate(s: string): boolean {
+  return /^\d{4}-\d{1,2}-\d{1,2}$/.test(s);
 }

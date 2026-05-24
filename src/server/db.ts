@@ -37,6 +37,7 @@ export interface SubCardRow {
   itinerary_table_json: string | null;
   cost_json: string | null;
   photo_url: string | null;
+  photo_urls_json: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -111,6 +112,7 @@ export interface SubCardDTO {
   itineraryTable: ItineraryTable;
   cost: CostObject;
   photoUrl: string | null;
+  photoUrls: string[];
   sortOrder: number;
 }
 
@@ -184,6 +186,13 @@ export function rowToItinerary(row: { itinerary_table_json: string | null }): It
   return parseJSON<ItineraryTable>(row.itinerary_table_json, emptyItinerary());
 }
 
+export function rowToPhotoUrls(row: { photo_urls_json?: string | null; photo_url?: string | null }): string[] {
+  const parsed = parseJSON<string[]>(row.photo_urls_json ?? null, []);
+  const urls = parsed.map(s => String(s).trim()).filter(Boolean);
+  if (row.photo_url && !urls.includes(row.photo_url)) urls.unshift(row.photo_url);
+  return urls.slice(0, 10);
+}
+
 export function subCardRowToDTO(row: SubCardRow): SubCardDTO {
   return {
     id: row.id,
@@ -200,6 +209,7 @@ export function subCardRowToDTO(row: SubCardRow): SubCardDTO {
     itineraryTable: rowToItinerary(row),
     cost: rowToCost(row),
     photoUrl: row.photo_url,
+    photoUrls: rowToPhotoUrls(row),
     sortOrder: row.sort_order,
   };
 }

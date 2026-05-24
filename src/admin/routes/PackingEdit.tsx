@@ -14,7 +14,7 @@ interface FloatingControl {
 
 const columnLabels: Record<ColumnKey, string> = {
   item: '项目',
-  note: '备注',
+  note: '明细',
 };
 
 const newRow = (sortOrder: number): PackingRow => ({
@@ -157,6 +157,11 @@ export default function PackingEdit() {
           <div className="packing-sheet" ref={wrapRef} onMouseLeave={() => setControl(null)}>
             <div className="packing-sheet-wrap">
               <table>
+                <colgroup>
+                  {columns.map(key => (
+                    <col key={key} style={{ width: key === 'item' ? '16%' : '84%' }} />
+                  ))}
+                </colgroup>
                 <thead>
                   <tr>
                     {columns.map((key, i) => (
