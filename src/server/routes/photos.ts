@@ -3,6 +3,7 @@ import type { AppBindings } from '../middleware';
 import { requireAdmin } from '../middleware';
 
 const photos = new Hono<AppBindings>();
+const MAX_ADMIN_PHOTO_BYTES = 500 * 1024;
 
 // 上传：multipart/form-data，字段 file + optional folder
 photos.post('/', requireAdmin, async (c) => {
@@ -15,7 +16,7 @@ photos.post('/', requireAdmin, async (c) => {
   const folder = (form.get('folder') as string | null) || 'journeys';
 
   if (!(file instanceof File)) return c.json({ error: 'missing_file' }, 400);
-  if (file.size > 30 * 1024 * 1024) return c.json({ error: 'too_large' }, 413);
+  if (file.size > MAX_ADMIN_PHOTO_BYTES) return c.json({ error: 'too_large_500kb' }, 413);
   if (!file.type.startsWith('image/')) return c.json({ error: 'not_image' }, 415);
 
   const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';

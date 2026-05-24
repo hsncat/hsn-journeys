@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { uploadPhoto } from '../api';
 import { toast } from './Toast';
-import { compressImageToUnder2MB } from '../lib/imageCompression';
+import { compressImageToUnder500KB } from '../lib/imageCompression';
 
 interface Props {
   value: string | null;
@@ -27,7 +27,7 @@ export default function PhotoUploader({ value, onChange, folder = 'journeys' }: 
     }
     setUploading(true);
     try {
-      const compressed = await compressImageToUnder2MB(file);
+      const compressed = await compressImageToUnder500KB(file);
       const key = await uploadPhoto(compressed, folder);
       onChange(key);
       toast('上传成功', 'success');
@@ -78,13 +78,24 @@ export default function PhotoUploader({ value, onChange, folder = 'journeys' }: 
               <img className="photo-lightbox-main" src={`/r2/${value}?v=${previewVersion}`} alt="" />
             </div>
           )}
+          <button
+            type="button"
+            className="photo-uploader-replace"
+            onClick={e => {
+              e.stopPropagation();
+              inputRef.current?.click();
+            }}
+            disabled={uploading}
+          >
+            替换照片
+          </button>
         </>
       ) : (
         <>
           <div style={{ fontSize: 40, color: 'var(--color-text-faint)' }}>📷</div>
           <div className="upload-hint" style={{ marginTop: 8 }}>
             点击或拖拽图片到此处<br />
-            <small style={{ color: 'var(--color-text-faint)' }}>会自动压缩到 2MB 以内</small>
+            <small style={{ color: 'var(--color-text-faint)' }}>会自动压缩到 500KB 以内</small>
           </div>
         </>
       )}

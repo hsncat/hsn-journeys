@@ -614,6 +614,7 @@
   text-align: center;
   cursor: pointer;
   transition: all 150ms;
+  position: relative;
 }
 .photo-uploader:hover, .photo-uploader.dragging {
   border-color: var(--color-accent);
@@ -633,6 +634,27 @@
   border: 0;
   background: transparent;
   cursor: zoom-in;
+}
+.photo-uploader-replace {
+  margin-top: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+.photo-uploader-replace:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.photo-uploader-replace:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 .photo-uploader .upload-hint {
   color: var(--color-text-muted);

@@ -1,30 +1,42 @@
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 500 * 1024;
 
-export async function compressImageToUnder2MB(file: File): Promise<File> {
+export async function compressImageToUnder500KB(file: File): Promise<File> {
   if (!file.type.startsWith('image/')) return file;
   if (file.size <= MAX_IMAGE_BYTES && file.type === 'image/jpeg') return file;
 
   const bitmap = await loadImage(file);
-  let maxSide = Math.min(Math.max(bitmap.width, bitmap.height), 2400);
-  let quality = 0.86;
+  let maxSide = Math.min(Math.max(bitmap.width, bitmap.height), 1800);
+  let quality = 0.82;
+  let bestBlob: Blob | null = null;
 
-  for (let attempt = 0; attempt < 14; attempt++) {
+  for (let attempt = 0; attempt < 22; attempt++) {
     const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
     const width = Math.max(1, Math.round(bitmap.width * scale));
     const height = Math.max(1, Math.round(bitmap.height * scale));
     const blob = await drawToJpeg(bitmap, width, height, quality);
-    if (blob.size <= MAX_IMAGE_BYTES || attempt === 13) {
-      return new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+    if (!bestBlob || blob.size < bestBlob.size) bestBlob = blob;
+    if (blob.size <= MAX_IMAGE_BYTES) {
+      return toJpegFile(blob, file.name);
     }
-    if (quality > 0.58) {
+
+    if (quality > 0.48) {
       quality -= 0.08;
     } else {
-      maxSide = Math.max(900, Math.round(maxSide * 0.82));
-      quality = 0.76;
+      maxSide = Math.max(420, Math.round(maxSide * 0.76));
+      quality = 0.72;
     }
   }
 
-  return file;
+  if (bestBlob && bestBlob.size <= MAX_IMAGE_BYTES) {
+    return toJpegFile(bestBlob, file.name);
+  }
+
+  const fallback = await drawToJpeg(bitmap, 360, Math.max(1, Math.round(360 * bitmap.height / bitmap.width)), 0.42);
+  return toJpegFile(fallback, file.name);
+}
+
+function toJpegFile(blob: Blob, originalName: string): File {
+  return new File([blob], originalName.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
 }
 
 function loadImage(file: File): Promise<HTMLImageElement> {
@@ -49,6 +61,8 @@ function drawToJpeg(img: HTMLImageElement, width: number, height: number, qualit
   canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) return Promise.reject(new Error('canvas_context_failed'));
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, width, height);
   ctx.drawImage(img, 0, 0, width, height);
   return new Promise((resolve, reject) => {
     canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('canvas_to_blob_failed')), 'image/jpeg', quality);

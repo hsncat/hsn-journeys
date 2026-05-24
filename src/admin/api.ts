@@ -19,7 +19,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `HTTP ${res.status}`);
+    throw new Error(body.error === 'too_large_500kb' ? '图片压缩后仍超过 500KB，请换一张图片' : (body.error || `HTTP ${res.status}`));
   }
   return res.json() as Promise<T>;
 }

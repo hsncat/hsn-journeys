@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { uploadPhoto } from '../api';
 import { toast } from './Toast';
-import { compressImageToUnder2MB } from '../lib/imageCompression';
+import { compressImageToUnder500KB } from '../lib/imageCompression';
 
 interface Props {
   photos: string[];
@@ -26,12 +26,12 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
     try {
       const uploaded: string[] = [];
       for (const file of selected) {
-        const compressed = await compressImageToUnder2MB(file);
+        const compressed = await compressImageToUnder500KB(file);
         uploaded.push(await uploadPhoto(compressed, folder));
       }
       const nextCover = coverKey || uploaded[0] || null;
       const next = normalizePhotos([...normalized, ...uploaded], nextCover);
-      onChange(next, nextCover, false);
+      onChange(next, nextCover, !coverKey && Boolean(nextCover));
       toast('照片已上传', 'success');
     } catch (err) {
       toast(err instanceof Error ? err.message : '上传失败', 'error');
