@@ -81,8 +81,8 @@ function searchTokens(j: JourneyDTO): string {
               data-tokens={tokens}
               data-region={intl ? 'international' : 'domestic'}
             >
-              <details>
-                <summary class="primary-card">
+              {subList.length === 1 ? (
+                <a href={`/detail/${j.id}?sub=${encodeURIComponent(subList[0].id)}`} class="primary-card primary-card-link">
                   <div class:list={['primary-emoji', j.photoUrl && 'has-photo']} aria-hidden="true">
                     {j.photoUrl ? <img src={`/r2/${j.photoUrl}`} alt="" loading="lazy" /> : '📍'}
                   </div>
@@ -94,86 +94,96 @@ function searchTokens(j: JourneyDTO): string {
                       </span>
                     </div>
                     <div class="primary-meta">
-                      <span>
-                        <Fragment set:html={icon('calendar', { size: 14 })} />
-                        {fmtDateRange(j.date, j.endDate)}
-                      </span>
-                      <span>
-                        <Fragment set:html={icon('compass', { size: 14 })} />
-                        {daysBetween(j.date, j.endDate)}天
-                      </span>
-                      <span>
-                        <Fragment set:html={icon('mapPin', { size: 14 })} />
-                        {j.country}
-                      </span>
+                      <span><Fragment set:html={icon('calendar', { size: 14 })} /> {fmtDateRange(j.date, j.endDate)}</span>
+                      <span><Fragment set:html={icon('compass', { size: 14 })} /> {daysBetween(j.date, j.endDate)}天</span>
+                      <span><Fragment set:html={icon('mapPin', { size: 14 })} /> {j.country}</span>
                       {total > 0 && (
-                        <span class="tabular">
-                          <Fragment set:html={icon('dollarSign', { size: 14 })} />
-                          ¥{fmtMoney(total)}
-                        </span>
+                        <span class="tabular"><Fragment set:html={icon('dollarSign', { size: 14 })} /> ¥{fmtMoney(total)}</span>
                       )}
                     </div>
                     {j.highlights.length > 0 && (
                       <ul class="primary-spots">
                         {j.highlights.slice(0, 6).map(h => (
-                          <li>
-                            <span aria-hidden="true">⭐</span>
-                            <span>{h}</span>
-                          </li>
+                          <li><span aria-hidden="true">⭐</span><span>{h}</span></li>
                         ))}
                       </ul>
                     )}
                   </div>
-                  <div class="primary-chevron" aria-hidden="true">
-                    <Fragment set:html={icon('chevronDown', { size: 22 })} />
-                  </div>
-                </summary>
+                </a>
+              ) : (
+                <details>
+                  <summary class="primary-card">
+                    <div class:list={['primary-emoji', j.photoUrl && 'has-photo']} aria-hidden="true">
+                      {j.photoUrl ? <img src={`/r2/${j.photoUrl}`} alt="" loading="lazy" /> : '📍'}
+                    </div>
+                    <div class="primary-content">
+                      <div class="primary-head">
+                        <h3 class="primary-title">{j.title || `${j.province} · ${j.city}`}</h3>
+                        <span class={`pill ${intl ? 'pill-red' : 'pill-blue'}`}>
+                          {intl ? '国际' : '国内'}
+                        </span>
+                      </div>
+                      <div class="primary-meta">
+                        <span><Fragment set:html={icon('calendar', { size: 14 })} /> {fmtDateRange(j.date, j.endDate)}</span>
+                        <span><Fragment set:html={icon('compass', { size: 14 })} /> {daysBetween(j.date, j.endDate)}天</span>
+                        <span><Fragment set:html={icon('mapPin', { size: 14 })} /> {j.country}</span>
+                        {total > 0 && (
+                          <span class="tabular"><Fragment set:html={icon('dollarSign', { size: 14 })} /> ¥{fmtMoney(total)}</span>
+                        )}
+                      </div>
+                      {j.highlights.length > 0 && (
+                        <ul class="primary-spots">
+                          {j.highlights.slice(0, 6).map(h => (
+                            <li><span aria-hidden="true">⭐</span><span>{h}</span></li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <div class="primary-chevron" aria-hidden="true">
+                      <Fragment set:html={icon('chevronDown', { size: 22 })} />
+                    </div>
+                  </summary>
 
-                <div class="primary-body">
-                  {j.description && <p class="primary-desc">{j.description}</p>}
-                  {subList.length > 0 && (
-                    <div class="subcards">
-                      {subList.map(s => {
-                        const subTotal = totalCost(s.cost);
-                        return (
-                          <a href={`/detail/${j.id}?sub=${encodeURIComponent(s.id)}`} class="subcard">
-                            <div class="subcard__date tabular">
-                              <span>{fmtDate(s.date, { short: true })}</span>
-                              {s.endDate && s.endDate !== s.date && (
-                                <span>~ {fmtDate(s.endDate, { short: true })}</span>
-                              )}
-                            </div>
-                            <div class="subcard__main">
-                              <h4>
-                                <span class="emoji" aria-hidden="true">📍</span>
-                                {s.name}
-                              </h4>
-                              {(s.highlights || []).length > 0 && (
-                                <div class="subcard__chips">
-                                  {s.highlights.slice(0, 5).map(h => <span class="chip">{h}</span>)}
+                  <div class="primary-body">
+                    {j.description && <p class="primary-desc">{j.description}</p>}
+                    {subList.length > 0 && (
+                      <div class="subcards">
+                        {subList.map(s => {
+                          const subTotal = totalCost(s.cost);
+                          return (
+                            <a href={`/detail/${j.id}?sub=${encodeURIComponent(s.id)}`} class="subcard">
+                              <div class="subcard__date tabular">
+                                <span>{fmtDate(s.date, { short: true })}</span>
+                                {s.endDate && s.endDate !== s.date && (
+                                  <span>~ {fmtDate(s.endDate, { short: true })}</span>
+                                )}
+                              </div>
+                              <div class="subcard__main">
+                                <h4>
+                                  <span class="emoji" aria-hidden="true">📍</span>
+                                  {s.name}
+                                </h4>
+                                {(s.highlights || []).length > 0 && (
+                                  <div class="subcard__chips">
+                                    {s.highlights.slice(0, 5).map(h => <span class="chip">{h}</span>)}
+                                  </div>
+                                )}
+                                {s.story && <p class="subcard__story">{s.story}</p>}
+                              </div>
+                              {subTotal > 0 && (
+                                <div class="subcard__cost tabular">
+                                  <Fragment set:html={icon('dollarSign', { size: 12 })} />
+                                  ¥{fmtMoney(subTotal)}
                                 </div>
                               )}
-                              {s.story && <p class="subcard__story">{s.story}</p>}
-                            </div>
-                            {subTotal > 0 && (
-                              <div class="subcard__cost tabular">
-                                <Fragment set:html={icon('dollarSign', { size: 12 })} />
-                                ¥{fmtMoney(subTotal)}
-                              </div>
-                            )}
-                          </a>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <div class="primary-actions">
-                    <a href={`/detail/${j.id}`} class="ghost-btn">
-                      <Fragment set:html={icon('eye', { size: 14 })} />
-                      <span>查看详情</span>
-                    </a>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                </div>
-              </details>
+                </details>
+              )}
             </article>
           );
         })}
@@ -466,6 +476,13 @@ function searchTokens(j: JourneyDTO): string {
     user-select: none;
   }
   .primary-card::-webkit-details-marker { display: none; }
+  .primary-card-link {
+    color: inherit;
+    text-decoration: none;
+  }
+  .primary-card-link:hover .primary-title {
+    color: var(--color-primary);
+  }
   .primary-emoji {
     width: 80px;
     height: 80px;

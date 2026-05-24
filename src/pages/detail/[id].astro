@@ -107,6 +107,7 @@ function renderItineraryTable(t: ItineraryTable | null): string {
             class:list={['sub-tab', activeSub?.id === s.id && 'is-active']}
             role="tab"
           >
+            <span class="sub-tab__pin" aria-hidden="true">📍</span>
             <span class="sub-tab__name">{s.name}</span>
             <span class="sub-tab__date">{fmtDate(s.date, { short: true })}</span>
           </a>
@@ -335,6 +336,7 @@ function renderItineraryTable(t: ItineraryTable | null): string {
     color: var(--color-text-inverse);
   }
   .sub-tab__name { font-weight: 600; font-size: 14px; }
+  .sub-tab__pin { font-size: 16px; line-height: 1; }
   .sub-tab__date { font-size: 11px; opacity: 0.7; }
 
   /* Sub content */

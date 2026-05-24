@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  createJourneyApi, deleteSubCardApi, getJourneyApi, resyncJourneyApi,
+  createJourneyApi, deleteSubCardApi, getJourneyApi, resyncJourneyApi, updateJourneyApi,
 } from '../api';
 import type { JourneyDTO, SubCardDTO } from '@/server/db';
 import { emptyCost, emptyItinerary } from '@/server/db';
@@ -97,6 +97,18 @@ export default function JourneyEdit({ mode }: Props) {
 
   const update = <K extends keyof JourneyDTO>(key: K, value: JourneyDTO[K]) => {
     setJ(prev => ({ ...prev, [key]: value }));
+  };
+
+  const updateCoverPhoto = async (key: string | null) => {
+    update('photoUrl', key);
+    if (mode !== 'edit') return;
+    try {
+      const fresh = await updateJourneyApi(id, { photoUrl: key });
+      setJ(fresh);
+      toast('封面照片已保存', 'success');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : '封面照片保存失败', 'error');
+    }
   };
 
   const createDraftJourney = async (target: 'journey' | 'template' | 'new-sub') => {
@@ -367,7 +379,7 @@ export default function JourneyEdit({ mode }: Props) {
 
       <div className="admin-card">
         <h2>封面照片</h2>
-        <PhotoUploader value={autoJourney.photoUrl} onChange={key => update('photoUrl', key)} folder={`journeys/${id || 'new'}`} />
+        <PhotoUploader value={autoJourney.photoUrl} onChange={updateCoverPhoto} folder={`journeys/${id || 'new'}`} />
       </div>
 
       <div className="admin-card">
