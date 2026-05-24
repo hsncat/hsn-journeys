@@ -158,14 +158,31 @@ function renderItineraryTable(t: ItineraryTable | null): string {
             <h3>精彩瞬间</h3>
             <div class="photo-grid">
               {activePhotos.map((key, index) => (
-                <a href={`/r2/${key}`} target="_blank" rel="noopener" class="photo">
+                <button type="button" class="photo" data-photo-index={index}>
                   <img src={`/r2/${key}`} alt={`${activeSub.name} 精彩瞬间 ${index + 1}`} loading="lazy" />
-                </a>
+                </button>
               ))}
             </div>
           </div>
         )}
       </section>
+    )}
+
+    {activePhotos.length > 0 && (
+      <div class="public-photo-lightbox" id="photo-lightbox" hidden>
+        <button type="button" class="public-photo-close" data-photo-close>关闭</button>
+        {activePhotos.length > 1 && <button type="button" class="public-photo-next" data-photo-next>下一张</button>}
+        <img class="public-photo-main" data-photo-main src={`/r2/${activePhotos[0]}`} alt="" />
+        {activePhotos.length > 1 && (
+          <div class="public-photo-strip">
+            {activePhotos.map((key, index) => (
+              <button type="button" data-photo-target={index} class={index === 0 ? 'is-active' : ''}>
+                <img src={`/r2/${key}`} alt="" loading="lazy" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     )}
 
     {journey.story && journey.subCards.length === 1 && (
@@ -176,6 +193,47 @@ function renderItineraryTable(t: ItineraryTable | null): string {
     )}
   </main>
 </Layout>
+
+<script>
+  const lightbox = document.querySelector<HTMLElement>('#photo-lightbox');
+  const mainPhoto = document.querySelector<HTMLImageElement>('[data-photo-main]');
+  const openers = [...document.querySelectorAll<HTMLButtonElement>('[data-photo-index]')];
+  const targets = [...document.querySelectorAll<HTMLButtonElement>('[data-photo-target]')];
+  const nextButton = document.querySelector<HTMLButtonElement>('[data-photo-next]');
+  const closeButton = document.querySelector<HTMLButtonElement>('[data-photo-close]');
+  const photoUrls = openers
+    .map(button => button.querySelector('img')?.getAttribute('src'))
+    .filter((src): src is string => Boolean(src));
+  let activePhotoIndex = 0;
+
+  function showPhoto(index: number) {
+    if (!lightbox || !mainPhoto || photoUrls.length === 0) return;
+    activePhotoIndex = (index + photoUrls.length) % photoUrls.length;
+    mainPhoto.src = photoUrls[activePhotoIndex];
+    lightbox.hidden = false;
+    targets.forEach((button, i) => button.classList.toggle('is-active', i === activePhotoIndex));
+  }
+
+  openers.forEach(button => {
+    button.addEventListener('click', () => showPhoto(Number(button.dataset.photoIndex || 0)));
+  });
+  targets.forEach(button => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      showPhoto(Number(button.dataset.photoTarget || 0));
+    });
+  });
+  nextButton?.addEventListener('click', event => {
+    event.stopPropagation();
+    showPhoto(activePhotoIndex + 1);
+  });
+  closeButton?.addEventListener('click', () => {
+    if (lightbox) lightbox.hidden = true;
+  });
+  lightbox?.addEventListener('click', event => {
+    if (event.target === lightbox) lightbox.hidden = true;
+  });
+</script>
 
 <style>
   .detail {
@@ -470,8 +528,13 @@ function renderItineraryTable(t: ItineraryTable | null): string {
   }
   .photo {
     display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
     border-radius: 16px;
     overflow: hidden;
+    background: transparent;
+    cursor: zoom-in;
   }
   .photo-grid {
     display: grid;
@@ -481,6 +544,82 @@ function renderItineraryTable(t: ItineraryTable | null): string {
   .photo img {
     width: 100%;
     aspect-ratio: 1;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+  }
+  .public-photo-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: grid;
+    place-items: center;
+    padding: 32px;
+    background: rgba(15, 23, 42, 0.86);
+  }
+  .public-photo-lightbox[hidden] {
+    display: none;
+  }
+  .public-photo-main {
+    max-width: min(1120px, 92vw);
+    max-height: 78vh;
+    display: block;
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.32);
+  }
+  .public-photo-close,
+  .public-photo-next {
+    position: fixed;
+    z-index: 2;
+    border: 0;
+    border-radius: 999px;
+    padding: 9px 14px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font: inherit;
+    cursor: pointer;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.22);
+  }
+  .public-photo-close {
+    top: 22px;
+    right: 24px;
+  }
+  .public-photo-next {
+    top: 50%;
+    right: 24px;
+    transform: translateY(-50%);
+  }
+  .public-photo-strip {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    z-index: 2;
+    display: flex;
+    gap: 8px;
+    max-width: min(760px, 84vw);
+    overflow-x: auto;
+    padding: 8px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.22);
+  }
+  .public-photo-strip button {
+    flex: 0 0 auto;
+    width: 58px;
+    height: 58px;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    overflow: hidden;
+    background: transparent;
+    cursor: pointer;
+  }
+  .public-photo-strip button.is-active {
+    border-color: var(--color-primary);
+  }
+  .public-photo-strip img {
+    width: 100%;
     height: 100%;
     display: block;
     object-fit: cover;

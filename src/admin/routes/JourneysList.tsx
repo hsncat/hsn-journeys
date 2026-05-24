@@ -12,6 +12,7 @@ export default function JourneysList() {
   const [featuredMode, setFeaturedMode] = useState(false);
   const [featuredIds, setFeaturedIds] = useState<Set<number>>(new Set());
   const [savingFeatured, setSavingFeatured] = useState(false);
+  const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -141,7 +142,13 @@ export default function JourneysList() {
                   )}
                   <td style={{ textAlign: 'center' }}>
                     {j.photoUrl ? (
-                      <img className="admin-cover-thumb" src={`/r2/${j.photoUrl}`} alt="" />
+                      <button
+                        type="button"
+                        className="admin-cover-thumb-btn"
+                        onClick={() => setPreviewPhoto(j.photoUrl)}
+                      >
+                        <img className="admin-cover-thumb" src={`/r2/${j.photoUrl}`} alt="" />
+                      </button>
                     ) : (
                       <span style={{ fontSize: 28 }}>📍</span>
                     )}
@@ -183,6 +190,12 @@ export default function JourneysList() {
           </table>
         )}
       </div>
+      {previewPhoto && (
+        <div className="photo-lightbox" onClick={() => setPreviewPhoto(null)}>
+          <button type="button" className="photo-lightbox-close" onClick={() => setPreviewPhoto(null)}>关闭</button>
+          <img className="photo-lightbox-main" src={`/r2/${previewPhoto}`} alt="" />
+        </div>
+      )}
     </div>
   );
 }

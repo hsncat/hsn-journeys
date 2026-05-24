@@ -109,7 +109,7 @@ journeys.post('/', requireAdmin, async (c) => {
       JSON.stringify(itin),
       JSON.stringify(subCost),
       sub.photoUrl ?? body.photoUrl ?? null,
-      JSON.stringify([sub.photoUrl ?? body.photoUrl].filter(Boolean).slice(0, 10)),
+      JSON.stringify([sub.photoUrl ?? body.photoUrl].filter(Boolean)),
       sub.sortOrder ?? index,
     ).run();
   }

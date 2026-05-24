@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { createPackingApi, deletePackingApi, listPackingApi, updatePackingApi } from '../api';
 import type { PackingRow } from '@/server/db';
 import { toast } from '../components/Toast';
@@ -28,9 +28,11 @@ const newRow = (sortOrder: number): PackingRow => ({
 
 export default function PackingEdit() {
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  const tableRef = useRef<HTMLTableElement | null>(null);
   const [list, setList] = useState<PackingRow[]>([]);
   const [deletedIds, setDeletedIds] = useState<number[]>([]);
   const [columns, setColumns] = useState<ColumnKey[]>(['item', 'note']);
+  const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>({ item: 16, note: 84 });
   const [control, setControl] = useState<FloatingControl | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -110,6 +112,35 @@ export default function PackingEdit() {
     });
   };
 
+  const autoResizeTextarea = (textarea: HTMLTextAreaElement) => {
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  };
+
+  const startColumnResize = (event: ReactMouseEvent, key: ColumnKey) => {
+    if (key !== 'item') return;
+    event.preventDefault();
+    event.stopPropagation();
+    const table = tableRef.current;
+    if (!table) return;
+    const startX = event.clientX;
+    const startItemWidth = columnWidths.item;
+    const tableWidth = table.getBoundingClientRect().width;
+
+    const handleMove = (moveEvent: MouseEvent) => {
+      const delta = ((moveEvent.clientX - startX) / tableWidth) * 100;
+      const nextItem = Math.min(42, Math.max(8, startItemWidth + delta));
+      setColumnWidths({ item: nextItem, note: 100 - nextItem });
+    };
+    const handleUp = () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+  };
+
   const handleSave = async () => {
     const rows = list
       .map((row, index) => ({ ...row, item: row.item.trim(), note: row.note?.trim() || null, sort_order: index }))
@@ -156,10 +187,10 @@ export default function PackingEdit() {
         ) : (
           <div className="packing-sheet" ref={wrapRef} onMouseLeave={() => setControl(null)}>
             <div className="packing-sheet-wrap">
-              <table>
+              <table ref={tableRef}>
                 <colgroup>
                   {columns.map(key => (
-                    <col key={key} style={{ width: key === 'item' ? '16%' : '84%' }} />
+                    <col key={key} style={{ width: `${columnWidths[key]}%` }} />
                   ))}
                 </colgroup>
                 <thead>
@@ -167,6 +198,13 @@ export default function PackingEdit() {
                     {columns.map((key, i) => (
                       <th key={key} onMouseEnter={e => showColControls(i, e.currentTarget)}>
                         {columnLabels[key]}
+                        {key === 'item' && (
+                          <span
+                            className="packing-col-resizer"
+                            onMouseDown={e => startColumnResize(e, key)}
+                            aria-hidden="true"
+                          />
+                        )}
                       </th>
                     ))}
                   </tr>
@@ -180,6 +218,8 @@ export default function PackingEdit() {
                             <textarea
                               value={row.note ?? ''}
                               onChange={e => updateCell(ri, key, e.target.value)}
+                              onInput={e => autoResizeTextarea(e.currentTarget)}
+                              ref={el => { if (el) autoResizeTextarea(el); }}
                               rows={1}
                             />
                           ) : (

@@ -190,7 +190,7 @@ export function rowToPhotoUrls(row: { photo_urls_json?: string | null; photo_url
   const parsed = parseJSON<string[]>(row.photo_urls_json ?? null, []);
   const urls = parsed.map(s => String(s).trim()).filter(Boolean);
   if (row.photo_url && !urls.includes(row.photo_url)) urls.unshift(row.photo_url);
-  return urls.slice(0, 10);
+  return urls;
 }
 
 export function subCardRowToDTO(row: SubCardRow): SubCardDTO {

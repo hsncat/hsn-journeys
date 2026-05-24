@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { uploadPhoto } from '../api';
 import { toast } from './Toast';
+import { compressImageToUnder2MB } from '../lib/imageCompression';
 
 interface Props {
   value: string | null;
@@ -8,35 +9,11 @@ interface Props {
   folder?: string;
 }
 
-async function compressImage(file: File, maxW = 1600, quality = 0.8): Promise<Blob> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = new Image();
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = () => reject(new Error('image_load_failed'));
-      img.src = url;
-    });
-    const ratio = Math.min(1, maxW / img.width);
-    const w = Math.round(img.width * ratio);
-    const h = Math.round(img.height * ratio);
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d')!;
-    ctx.drawImage(img, 0, 0, w, h);
-    return await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(b => b ? resolve(b) : reject(new Error('canvas_to_blob_failed')), 'image/jpeg', quality);
-    });
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
 export default function PhotoUploader({ value, onChange, folder = 'journeys' }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [previewVersion, setPreviewVersion] = useState(Date.now());
 
   useEffect(() => {
@@ -50,9 +27,8 @@ export default function PhotoUploader({ value, onChange, folder = 'journeys' }: 
     }
     setUploading(true);
     try {
-      const compressed = await compressImage(file);
-      const blob = new File([compressed], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
-      const key = await uploadPhoto(blob, folder);
+      const compressed = await compressImageToUnder2MB(file);
+      const key = await uploadPhoto(compressed, folder);
       onChange(key);
       toast('上传成功', 'success');
     } catch (err) {
@@ -83,15 +59,32 @@ export default function PhotoUploader({ value, onChange, folder = 'journeys' }: 
         onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])}
       />
       {uploading ? (
-        <div className="upload-hint">上传中…</div>
+        <div className="upload-hint">上传中...</div>
       ) : value ? (
-        <img src={`/r2/${value}?v=${previewVersion}`} alt="" />
+        <>
+          <button
+            type="button"
+            className="photo-uploader-preview"
+            onClick={e => {
+              e.stopPropagation();
+              setPreviewOpen(true);
+            }}
+          >
+            <img src={`/r2/${value}?v=${previewVersion}`} alt="" />
+          </button>
+          {previewOpen && (
+            <div className="photo-lightbox" onClick={e => { e.stopPropagation(); setPreviewOpen(false); }}>
+              <button type="button" className="photo-lightbox-close" onClick={() => setPreviewOpen(false)}>关闭</button>
+              <img className="photo-lightbox-main" src={`/r2/${value}?v=${previewVersion}`} alt="" />
+            </div>
+          )}
+        </>
       ) : (
         <>
           <div style={{ fontSize: 40, color: 'var(--color-text-faint)' }}>📷</div>
           <div className="upload-hint" style={{ marginTop: 8 }}>
             点击或拖拽图片到此处<br />
-            <small style={{ color: 'var(--color-text-faint)' }}>会自动压缩到 1600px / JPEG</small>
+            <small style={{ color: 'var(--color-text-faint)' }}>会自动压缩到 2MB 以内</small>
           </div>
         </>
       )}

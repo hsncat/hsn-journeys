@@ -184,5 +184,5 @@ export default subCards;
 function normalizePhotoUrls(urls: string[] | undefined, cover: string | null): string[] {
   const list = (urls ?? []).map(s => String(s).trim()).filter(Boolean);
   if (cover && !list.includes(cover)) list.unshift(cover);
-  return [...new Set(list)].slice(0, 10);
+  return [...new Set(list)];
 }
