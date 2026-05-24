@@ -46,6 +46,7 @@ interface SubCardBody {
   cost?: Record<string, number>;
   photoUrl?: string | null;
   photoUrls?: string[];
+  syncJourneyPhoto?: boolean;
   sortOrder?: number;
 }
 
@@ -69,7 +70,7 @@ async function resyncJourney(db: D1Database, journeyId: number, preferredPhotoUr
     agg.emoji ?? j.emoji,
     JSON.stringify(agg.highlights ?? j.highlights),
     JSON.stringify(agg.cost ?? j.cost),
-    preferredPhotoUrl ?? agg.photoUrl ?? j.photoUrl,
+    preferredPhotoUrl === undefined ? j.photoUrl : preferredPhotoUrl,
     journeyId,
   ).run();
 }
@@ -105,7 +106,7 @@ subCards.post('/', requireAdmin, async (c) => {
     body.sortOrder ?? 0,
   ).run();
 
-  await resyncJourney(c.env.DB, body.journeyId, body.photoUrl ?? undefined);
+  await resyncJourney(c.env.DB, body.journeyId, body.syncJourneyPhoto ? (body.photoUrl ?? null) : undefined);
 
   const row = await c.env.DB.prepare('SELECT * FROM sub_cards WHERE id = ?').bind(id).first<SubCardRow>();
   return c.json({ subCard: row ? subCardRowToDTO(row) : null }, 201);
@@ -161,7 +162,7 @@ subCards.put('/:id', requireAdmin, async (c) => {
   ).run();
 
   const newJourneyId = body.journeyId ?? oldJourneyId;
-  await resyncJourney(c.env.DB, newJourneyId, body.photoUrl ?? undefined);
+  await resyncJourney(c.env.DB, newJourneyId, body.syncJourneyPhoto ? (body.photoUrl ?? null) : undefined);
   if (newJourneyId !== oldJourneyId) await resyncJourney(c.env.DB, oldJourneyId);
 
   const row = await c.env.DB.prepare('SELECT * FROM sub_cards WHERE id = ?').bind(id).first<SubCardRow>();

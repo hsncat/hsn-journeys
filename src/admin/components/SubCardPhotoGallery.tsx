@@ -6,7 +6,7 @@ interface Props {
   photos: string[];
   cover: string | null;
   folder: string;
-  onChange: (photos: string[], cover: string | null) => void;
+  onChange: (photos: string[], cover: string | null, syncJourneyCover?: boolean) => void;
 }
 
 export default function SubCardPhotoGallery({ photos, cover, folder, onChange }: Props) {
@@ -33,7 +33,7 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
       }
       const nextCover = coverKey || uploaded[0] || null;
       const next = normalizePhotos([...normalized, ...uploaded], nextCover);
-      onChange(next, nextCover);
+      onChange(next, nextCover, false);
       toast('照片已上传', 'success');
     } catch (err) {
       toast(err instanceof Error ? err.message : '上传失败', 'error');
@@ -43,14 +43,19 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
     }
   };
 
-  const setCover = (key: string) => {
-    onChange(normalized, key);
+  const setSubCover = (key: string) => {
+    onChange(normalized, key, false);
+    toast('已设置为子卡片封面', 'success');
+  };
+
+  const setJourneyCover = (key: string) => {
+    onChange(normalized, key, true);
     toast('已设为封面，保存后同步到一级卡片', 'success');
   };
 
   const removePhoto = (key: string) => {
     const next = normalized.filter(photo => photo !== key);
-    onChange(next, coverKey === key ? (next[0] ?? null) : coverKey);
+    onChange(next, coverKey === key ? (next[0] ?? null) : coverKey, false);
   };
 
   return (
@@ -76,7 +81,8 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
               </button>
               {coverKey === key && <figcaption>封面</figcaption>}
               <div className="sub-photo-actions">
-                <button type="button" onClick={() => setCover(key)}>设为封面</button>
+                <button type="button" onClick={() => setSubCover(key)}>设置为子卡片封面</button>
+                <button type="button" onClick={() => setJourneyCover(key)}>设为封面</button>
                 <button type="button" className="danger" onClick={() => removePhoto(key)}>移除</button>
               </div>
             </figure>

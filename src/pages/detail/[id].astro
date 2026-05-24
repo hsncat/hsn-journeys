@@ -20,7 +20,7 @@ const defaultSub = journey.subCards.find(s => s.photoUrl && s.photoUrl === journ
 const activeSub = subId
   ? journey.subCards.find(s => s.id === subId) ?? defaultSub
   : defaultSub;
-const heroPhoto = activeSub?.photoUrl ?? journey.photoUrl;
+const heroPhoto = journey.photoUrl;
 const activePhotos = activeSub
   ? [...new Set([...(activeSub.photoUrls ?? []), activeSub.photoUrl].filter((v): v is string => !!v))]
   : [];
@@ -107,7 +107,6 @@ function renderItineraryTable(t: ItineraryTable | null): string {
             class:list={['sub-tab', activeSub?.id === s.id && 'is-active']}
             role="tab"
           >
-            <span class="emoji" aria-hidden="true">{s.emoji ?? '📍'}</span>
             <span class="sub-tab__name">{s.name}</span>
             <span class="sub-tab__date">{fmtDate(s.date, { short: true })}</span>
           </a>
@@ -119,7 +118,9 @@ function renderItineraryTable(t: ItineraryTable | null): string {
       <section class="sub-content">
         {journey.subCards.length > 1 && (
           <h2 class="sub-title">
-            <span aria-hidden="true">{activeSub.emoji ?? '📍'}</span>
+            <span class:list={['sub-title-media', activeSub.photoUrl && 'has-photo']} aria-hidden="true">
+              {activeSub.photoUrl ? <img src={`/r2/${activeSub.photoUrl}`} alt="" loading="lazy" /> : (activeSub.emoji ?? '📍')}
+            </span>
             {activeSub.name}
             <span class="sub-date-range">· {fmtDateRange(activeSub.date, activeSub.endDate)}</span>
           </h2>
@@ -333,7 +334,6 @@ function renderItineraryTable(t: ItineraryTable | null): string {
     background: var(--color-primary);
     color: var(--color-text-inverse);
   }
-  .sub-tab .emoji { font-size: 22px; }
   .sub-tab__name { font-weight: 600; font-size: 14px; }
   .sub-tab__date { font-size: 11px; opacity: 0.7; }
 
@@ -345,6 +345,24 @@ function renderItineraryTable(t: ItineraryTable | null): string {
     display: inline-flex;
     align-items: center;
     gap: 10px;
+  }
+  .sub-title-media {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: var(--color-surface-alt);
+    font-size: 24px;
+  }
+  .sub-title-media img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
   }
   .sub-date-range {
     font-size: 16px;

@@ -58,9 +58,9 @@ export const listSubCardsApi = (journeyId?: number) =>
   ).then(r => r.subCards);
 export const getSubCardApi = (id: string) =>
   request<{ subCard: SubCardDTO }>(`/api/sub-cards/${id}`).then(r => r.subCard);
-export const createSubCardApi = (data: Partial<SubCardDTO> & { journeyId: number }) =>
+export const createSubCardApi = (data: Partial<SubCardDTO> & { journeyId: number; syncJourneyPhoto?: boolean }) =>
   request<{ subCard: SubCardDTO }>('/api/sub-cards', { method: 'POST', body: JSON.stringify(data) }).then(r => r.subCard);
-export const updateSubCardApi = (id: string, data: Partial<SubCardDTO>) =>
+export const updateSubCardApi = (id: string, data: Partial<SubCardDTO> & { syncJourneyPhoto?: boolean }) =>
   request<{ subCard: SubCardDTO }>(`/api/sub-cards/${id}`, { method: 'PUT', body: JSON.stringify(data) }).then(r => r.subCard);
 export const deleteSubCardApi = (id: string) =>
   request(`/api/sub-cards/${id}`, { method: 'DELETE' });

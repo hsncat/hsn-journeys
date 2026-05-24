@@ -41,6 +41,7 @@ export default function SubCardEdit({ mode }: Props) {
   const [parent, setParent] = useState<JourneyDTO | null>(null);
   const [loading, setLoading] = useState(mode === 'edit');
   const [saving, setSaving] = useState(false);
+  const [syncJourneyPhoto, setSyncJourneyPhoto] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -121,7 +122,9 @@ export default function SubCardEdit({ mode }: Props) {
           cost: s.cost,
           photoUrl: s.photoUrl,
           photoUrls: s.photoUrls,
+          syncJourneyPhoto,
         });
+        setSyncJourneyPhoto(false);
         toast('已创建', 'success');
         navigate(`/journeys/${journeyId}`);
       } else {
@@ -140,7 +143,9 @@ export default function SubCardEdit({ mode }: Props) {
           cost: s.cost,
           photoUrl: s.photoUrl,
           photoUrls: s.photoUrls,
+          syncJourneyPhoto,
         });
+        setSyncJourneyPhoto(false);
         toast('已保存', 'success');
         // 如果转移到新 journey
         if (s.journeyId !== journeyId) {
@@ -240,7 +245,10 @@ export default function SubCardEdit({ mode }: Props) {
           photos={s.photoUrls}
           cover={s.photoUrl}
           folder={`sub-cards/${s.id || 'new'}`}
-          onChange={(photoUrls, photoUrl) => setS(prev => ({ ...prev, photoUrls, photoUrl }))}
+          onChange={(photoUrls, photoUrl, shouldSyncJourneyPhoto = false) => {
+            setS(prev => ({ ...prev, photoUrls, photoUrl }));
+            setSyncJourneyPhoto(shouldSyncJourneyPhoto);
+          }}
         />
       </div>
 
