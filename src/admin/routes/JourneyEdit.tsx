@@ -90,6 +90,7 @@ export default function JourneyEdit({ mode }: Props) {
       ...aggregated,
       country: normalizeCountry(aggregated.country),
       highlights: j.highlights.length ? j.highlights : (aggregated.highlights ?? []),
+      photoUrl: j.photoUrl ?? aggregated.photoUrl ?? null,
       title: aggregated.title || buildJourneyTitle(aggregated.province, aggregated.city),
     } as JourneyDTO;
   }, [j]);

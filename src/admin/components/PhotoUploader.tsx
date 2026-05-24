@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { uploadPhoto } from '../api';
 import { toast } from './Toast';
 
@@ -37,6 +37,11 @@ export default function PhotoUploader({ value, onChange, folder = 'journeys' }: 
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [previewVersion, setPreviewVersion] = useState(Date.now());
+
+  useEffect(() => {
+    setPreviewVersion(Date.now());
+  }, [value]);
 
   const handleFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -54,6 +59,7 @@ export default function PhotoUploader({ value, onChange, folder = 'journeys' }: 
       toast(err instanceof Error ? err.message : '上传失败', 'error');
     } finally {
       setUploading(false);
+      if (inputRef.current) inputRef.current.value = '';
     }
   };
 
@@ -79,15 +85,7 @@ export default function PhotoUploader({ value, onChange, folder = 'journeys' }: 
       {uploading ? (
         <div className="upload-hint">上传中…</div>
       ) : value ? (
-        <>
-          <img src={`/r2/${value}`} alt="" />
-          <div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'center' }}>
-            <span className="upload-hint">点击或拖拽更换</span>
-            <button type="button" className="btn btn-sm btn-danger" onClick={e => { e.stopPropagation(); onChange(null); }}>
-              移除
-            </button>
-          </div>
-        </>
+        <img src={`/r2/${value}?v=${previewVersion}`} alt="" />
       ) : (
         <>
           <div style={{ fontSize: 40, color: 'var(--color-text-faint)' }}>📷</div>

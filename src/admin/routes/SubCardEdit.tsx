@@ -99,6 +99,25 @@ export default function SubCardEdit({ mode }: Props) {
     }));
   };
 
+  const updatePhotos = async (
+    photoUrls: string[],
+    photoUrl: string | null,
+    shouldSyncJourneyPhoto = false,
+  ) => {
+    setS(prev => ({ ...prev, photoUrls, photoUrl }));
+    setSyncJourneyPhoto(shouldSyncJourneyPhoto);
+    if (mode !== 'edit' || !s.id || !shouldSyncJourneyPhoto) return;
+    try {
+      await updateSubCardApi(s.id, { photoUrl, photoUrls, syncJourneyPhoto: true });
+      setSyncJourneyPhoto(false);
+      setParent(prev => prev ? { ...prev, photoUrl } : prev);
+      setAllJourneys(prev => prev.map(jj => jj.id === s.journeyId ? { ...jj, photoUrl } : jj));
+      toast('一级卡片封面已同步', 'success');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : '同步一级卡片封面失败', 'error');
+    }
+  };
+
   const handleSave = async () => {
     if (!s.date) {
       toast('请填写开始日期', 'error');
@@ -245,10 +264,7 @@ export default function SubCardEdit({ mode }: Props) {
           photos={s.photoUrls}
           cover={s.photoUrl}
           folder={`sub-cards/${s.id || 'new'}`}
-          onChange={(photoUrls, photoUrl, shouldSyncJourneyPhoto = false) => {
-            setS(prev => ({ ...prev, photoUrls, photoUrl }));
-            setSyncJourneyPhoto(shouldSyncJourneyPhoto);
-          }}
+          onChange={updatePhotos}
         />
       </div>
 
