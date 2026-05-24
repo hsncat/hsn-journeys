@@ -139,7 +139,7 @@ export default function JourneysList() {
                       />
                     </td>
                   )}
-                  <td style={{ fontSize: 28, textAlign: 'center' }}>{j.emoji ?? '🌏'}</td>
+                  <td style={{ fontSize: 28, textAlign: 'center' }}>📍</td>
                   <td>
                     <Link to={`/journeys/${j.id}`} style={{ color: 'inherit', textDecoration: 'none', fontWeight: 600 }}>
                       {j.title}

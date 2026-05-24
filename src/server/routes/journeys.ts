@@ -60,7 +60,7 @@ journeys.post('/', requireAdmin, async (c) => {
      RETURNING id`
   ).bind(
     province, city, country, date, endDate, title,
-    body.emoji ?? null,
+    body.emoji ?? '📍',
     body.description ?? null,
     body.story ?? null,
     JSON.stringify(body.highlights ?? []),
@@ -77,7 +77,7 @@ journeys.post('/', requireAdmin, async (c) => {
     country,
     date,
     endDate,
-    emoji: body.emoji ?? null,
+    emoji: body.emoji ?? '📍',
     story: body.story ?? null,
     highlights: body.highlights ?? [],
     itineraryTable: emptyItinerary(),
@@ -103,7 +103,7 @@ journeys.post('/', requireAdmin, async (c) => {
       sub.country ?? country,
       sub.date ?? date,
       sub.endDate ?? endDate,
-      sub.emoji ?? body.emoji ?? null,
+      sub.emoji ?? body.emoji ?? '📍',
       sub.story ?? body.story ?? null,
       JSON.stringify(sub.highlights ?? body.highlights ?? []),
       JSON.stringify(itin),

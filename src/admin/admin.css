@@ -604,12 +604,6 @@
   display: grid;
   gap: 14px;
 }
-.sub-photo-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
 .sub-photo-empty {
   width: 100%;
   min-height: 140px;
@@ -653,6 +647,21 @@
   height: 100%;
   display: block;
   object-fit: cover;
+}
+.sub-photo-add-tile {
+  aspect-ratio: 1;
+  border: 2px dashed var(--color-border-strong);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sub-photo-add-tile:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
 }
 .sub-photo-tile figcaption {
   position: absolute;
@@ -731,7 +740,6 @@
 
 @media (max-width: 560px) {
   .sub-photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .sub-photo-toolbar { align-items: flex-start; flex-direction: column; }
 }
 
 /* ----- Toast ----- */

@@ -22,7 +22,7 @@ const cityCount = new Set(
   })
 ).size;
 const journeyCount = journeys.length;
-const photoCount = journeys.filter(j => !!j.photoUrl).length || journeys.reduce((n, j) => n + j.highlights.length, 0);
+const photoCount = journeys.reduce((n, j) => n + j.highlights.length, 0);
 
 const featured = journeys
   .filter(j => j.isFeatured)
@@ -339,25 +339,25 @@ const heroSub = settings.hero_subtitle || '记录美好生活';
   }
   .journey-card__meta {
     display: grid;
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.35fr) auto;
-    gap: 8px;
+    grid-template-columns: minmax(max-content, 1.1fr) minmax(max-content, 1.35fr) max-content;
+    gap: 4px;
     color: var(--color-text-muted);
-    font-size: 12px;
+    font-size: 10px;
   }
   .journey-card__meta span {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 3px;
     min-width: 0;
     max-width: 100%;
-    min-height: 30px;
-    padding: 5px 9px;
+    min-height: 24px;
+    padding: 3px 5px;
     border: 1px solid var(--color-border);
     border-radius: 999px;
     background: var(--color-surface-alt);
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    text-overflow: clip;
   }
   .journey-card__meta span:nth-child(2) {
     min-width: 0;
@@ -367,13 +367,13 @@ const heroSub = settings.hero_subtitle || '记录美好生活';
   }
   @media (max-width: 640px) {
     .journey-card__meta {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto;
-      gap: 6px;
-      font-size: 11px;
+      grid-template-columns: minmax(max-content, 1fr) minmax(max-content, 1.2fr) max-content;
+      gap: 3px;
+      font-size: 9px;
     }
     .journey-card__meta span {
-      min-height: 28px;
-      padding: 4px 7px;
+      min-height: 22px;
+      padding: 3px 4px;
     }
   }
   .highlight-lines {

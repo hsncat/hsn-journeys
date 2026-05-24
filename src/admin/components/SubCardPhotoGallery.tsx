@@ -55,17 +55,6 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
 
   return (
     <div className="sub-photo-gallery">
-      <div className="sub-photo-toolbar">
-        <div className="upload-hint">最多 10 张，按原图上传</div>
-        <button
-          type="button"
-          className="btn btn-sm btn-ghost"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading || normalized.length >= 10}
-        >
-          {uploading ? '上传中...' : '+ 上传照片'}
-        </button>
-      </div>
       <input
         ref={inputRef}
         type="file"
@@ -92,6 +81,16 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
               </div>
             </figure>
           ))}
+          {normalized.length < 10 && (
+            <button
+              type="button"
+              className="sub-photo-add-tile"
+              onClick={() => inputRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? '上传中...' : '+ 添加照片'}
+            </button>
+          )}
         </div>
       )}
       {preview && (
