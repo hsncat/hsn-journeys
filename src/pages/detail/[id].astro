@@ -30,8 +30,8 @@ const costItems: CostItem[] = [
   { key: 'transport', label: '交通', value: journey.cost.transport, iconName: 'car' },
   { key: 'accommodation', label: '住宿', value: journey.cost.accommodation, iconName: 'bed' },
   { key: 'food', label: '餐饮', value: journey.cost.food, iconName: 'utensils' },
-  { key: 'shopping', label: '购物', value: journey.cost.shopping, iconName: 'dollarSign' },
-  { key: 'ticket', label: '门票', value: journey.cost.ticket, iconName: 'dollarSign' },
+  { key: 'shopping', label: '购物', value: journey.cost.shopping, iconName: 'shoppingBag' },
+  { key: 'ticket', label: '门票', value: journey.cost.ticket, iconName: 'ticket' },
 ];
 const visibleCosts = costItems.filter(c => c.value > 0);
 
@@ -352,43 +352,67 @@ function renderItineraryTable(t: ItineraryTable | null): string {
     overflow-x: auto;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: 14px;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
   }
   .table-wrap :global(.itinerary-table) {
     width: 100%;
-    border-collapse: collapse;
+    min-width: 720px;
+    border-collapse: separate;
+    border-spacing: 0;
     font-size: 14px;
   }
   .table-wrap :global(.itinerary-table th) {
-    text-align: left;
+    text-align: center;
     padding: 14px 16px;
     background: var(--color-surface-alt);
-    color: var(--color-text-muted);
-    font-weight: 600;
+    color: var(--color-primary);
+    font-weight: 700;
     font-size: 13px;
     letter-spacing: 0.3px;
+    border-bottom: 1px solid var(--color-border);
   }
-  .table-wrap :global(.itinerary-table th:first-child) { border-top-left-radius: 14px; }
-  .table-wrap :global(.itinerary-table th:last-child) { border-top-right-radius: 14px; }
+  .table-wrap :global(.itinerary-table th:first-child) { border-top-left-radius: 16px; }
+  .table-wrap :global(.itinerary-table th:last-child) { border-top-right-radius: 16px; }
   .table-wrap :global(.itinerary-table td) {
-    padding: 12px 16px;
-    border-top: 1px solid var(--color-border);
-    line-height: 1.6;
-    vertical-align: top;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--color-border);
+    line-height: 1.75;
+    vertical-align: middle;
+    color: var(--color-text);
+    background: var(--color-surface);
+  }
+  .table-wrap :global(.itinerary-table tbody tr:nth-child(even) td) {
+    background: rgba(244, 244, 245, 0.5);
+  }
+  .table-wrap :global(.itinerary-table tbody tr:hover td) {
+    background: rgba(37, 99, 235, 0.035);
+  }
+  .table-wrap :global(.itinerary-table tbody tr:last-child td) {
+    border-bottom: 0;
   }
   .table-wrap :global(.itinerary-table .date-col) {
-    color: var(--color-text-muted);
+    color: var(--color-primary);
+    font-weight: 700;
     font-feature-settings: "tnum" on;
     white-space: nowrap;
-    width: 110px;
+    width: 120px;
+    text-align: center;
+    background: var(--color-surface-alt);
   }
 
   .story {
     color: var(--color-text);
     line-height: 1.85;
-    font-size: 15px;
+    font-size: clamp(15px, 1.8vw, 17px);
     white-space: pre-wrap;
-    max-width: 65ch;
+    width: min(100%, 72ch);
+    overflow-wrap: anywhere;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: clamp(18px, 3vw, 28px);
+    margin: 0;
   }
   .photo {
     display: block;
@@ -406,5 +430,8 @@ function renderItineraryTable(t: ItineraryTable | null): string {
     .hero-emoji { width: 80px; height: 80px; font-size: 48px; border-radius: 20px; }
     .sub-tabs { padding: 4px; }
     .sub-tab { min-width: 100px; padding: 8px 12px; }
+    .table-wrap :global(.itinerary-table) { min-width: 640px; }
+    .table-wrap :global(.itinerary-table th),
+    .table-wrap :global(.itinerary-table td) { padding: 12px 14px; }
   }
 </style>

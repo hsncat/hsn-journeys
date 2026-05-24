@@ -123,7 +123,16 @@ export default function LeafletMap({ coords, locations }: Props) {
       });
 
       if (markers.length) {
-        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 6 });
+        const knownBounds = L.latLngBounds([]);
+        markers
+          .filter(m => !m.estimated && m.lng >= -20 && m.lng <= 150 && m.lat >= 5 && m.lat <= 65)
+          .forEach(m => knownBounds.extend([m.lat, m.lng]));
+
+        if (knownBounds.isValid()) {
+          map.fitBounds(knownBounds, { padding: [56, 56], maxZoom: 5 });
+        } else {
+          map.fitBounds([[15, -10], [58, 145]], { padding: [56, 56], maxZoom: 5 });
+        }
       }
     })();
 
