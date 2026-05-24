@@ -506,6 +506,68 @@
   opacity: 0.35;
   cursor: not-allowed;
 }
+
+/* ----- Packing sheet ----- */
+.packing-admin-card {
+  padding: 20px;
+  overflow: visible;
+}
+.packing-admin-title {
+  margin: 0 0 16px;
+  text-align: center;
+  font-size: 22px;
+}
+.packing-sheet {
+  position: relative;
+}
+.packing-sheet-wrap {
+  position: relative;
+  margin: 34px 48px 8px 0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  overflow: visible;
+}
+.packing-sheet table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.packing-sheet th,
+.packing-sheet td {
+  border: 1px solid var(--color-border);
+  padding: 0;
+}
+.packing-sheet th {
+  height: 42px;
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+.packing-sheet td input,
+.packing-sheet td textarea {
+  width: 100%;
+  border: 0;
+  padding: 10px 12px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  min-height: 42px;
+  resize: vertical;
+}
+.packing-sheet td textarea {
+  line-height: 1.55;
+}
+.packing-sheet td input:focus,
+.packing-sheet td textarea:focus {
+  background: var(--color-accent-soft);
+  outline: 0;
+}
+.packing-sheet tbody tr:hover td {
+  background: var(--color-bg);
+}
 /* ----- Photo uploader ----- */
 .photo-uploader {
   border: 2px dashed var(--color-border-strong);

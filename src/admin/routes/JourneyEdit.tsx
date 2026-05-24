@@ -380,5 +380,5 @@ export default function JourneyEdit({ mode }: Props) {
 }
 
 function normalizeCountry(country: string | null | undefined): string {
-  return country === '国外' ? '国外' : '国内';
+  return country === '国外' || country === '国际' ? '国际' : '国内';
 }

@@ -25,20 +25,29 @@ const [wishlist, packing] = await Promise.all([
         <summary>
           <span class="packing-summary-title">
             <h2><span aria-hidden="true">🧳</span> 行李清单</h2>
-            <span class="packing-count">{packing.length} 项 · 展开查看</span>
           </span>
           <Fragment set:html={icon('chevronDown', { size: 20, className: 'chevron' })} />
         </summary>
-        <div class="packing-list">
-          {packing.map(p => (
-            <article class="packing-item">
-              <div>
-                <h3>{p.item}</h3>
-                {p.note && <p>{p.note}</p>}
-              </div>
-              {p.is_overseas_only === 1 && <span class="packing-badge">出国</span>}
-            </article>
-          ))}
+        <div class="packing-table-wrap">
+          <table class="packing-table">
+            <thead>
+              <tr>
+                <th>项目</th>
+                <th>备注</th>
+              </tr>
+            </thead>
+            <tbody>
+              {packing.map(p => (
+                <tr>
+                  <td>
+                    {p.item}
+                    {p.is_overseas_only === 1 && <span class="packing-badge">出国</span>}
+                  </td>
+                  <td>{p.note ?? ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </details>
     </section>
@@ -115,18 +124,18 @@ const [wishlist, packing] = await Promise.all([
     list-style: none;
     cursor: pointer;
     padding: 20px 24px;
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: space-between;
     user-select: none;
   }
   .packing summary::-webkit-details-marker { display: none; }
   .packing-summary-title {
+    grid-column: 2;
     display: flex;
-    align-items: baseline;
-    gap: 14px;
+    align-items: center;
+    justify-content: center;
     min-width: 0;
-    flex-wrap: wrap;
   }
   .packing summary h2 {
     display: inline-flex;
@@ -135,49 +144,57 @@ const [wishlist, packing] = await Promise.all([
     font-size: 28px;
     margin: 0;
   }
-  .packing-count {
-    color: var(--color-text-muted);
-    font-size: 13px;
-    font-weight: 500;
-  }
   .packing summary :global(.chevron) {
+    justify-self: end;
     color: var(--color-text-muted);
     transition: transform 200ms var(--ease-out);
   }
   .packing details[open] summary :global(.chevron) { transform: rotate(180deg); }
 
-  .packing-list {
+  .packing-table-wrap {
     border-top: 1px solid var(--color-border);
     background: linear-gradient(180deg, var(--color-surface-alt), var(--color-surface));
     padding: 18px 20px 20px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 12px;
+    overflow-x: auto;
   }
-  .packing-item {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    min-height: 86px;
-    padding: 16px;
+  .packing-table {
+    width: 100%;
+    min-width: 620px;
+    border-collapse: separate;
+    border-spacing: 0;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 12px;
+    overflow: hidden;
+    font-size: 14px;
   }
-  .packing-item h3 {
-    margin: 0;
-    font-size: 16px;
-    line-height: 1.35;
+  .packing-table th {
+    padding: 13px 16px;
+    text-align: center;
+    background: var(--color-surface-alt);
+    color: var(--color-primary);
+    font-weight: 700;
+    border-bottom: 1px solid var(--color-border);
   }
-  .packing-item p {
-    margin: 6px 0 0;
+  .packing-table td {
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--color-border);
+    line-height: 1.65;
+    vertical-align: top;
+  }
+  .packing-table tr:last-child td {
+    border-bottom: 0;
+  }
+  .packing-table td:first-child {
+    width: 32%;
+    font-weight: 700;
+  }
+  .packing-table td:last-child {
     color: var(--color-text-muted);
-    font-size: 13px;
-    line-height: 1.55;
   }
   .packing-badge {
-    flex: 0 0 auto;
-    align-self: flex-start;
+    display: inline-block;
+    margin-left: 8px;
     padding: 3px 9px;
     border-radius: 999px;
     background: var(--color-warning-soft);
@@ -189,10 +206,10 @@ const [wishlist, packing] = await Promise.all([
   @media (max-width: 720px) {
     .packing summary { padding: 18px 18px; }
     .packing summary h2 { font-size: 24px; }
-    .packing-list {
-      grid-template-columns: 1fr;
+    .packing-table-wrap {
       padding: 14px;
     }
+    .packing-table { min-width: 560px; }
   }
 
   .grid {

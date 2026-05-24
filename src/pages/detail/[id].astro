@@ -121,7 +121,10 @@ function renderItineraryTable(t: ItineraryTable | null): string {
         {activeSub.highlights.length > 0 && (
           <div class="block">
             <h3>景点亮点</h3>
-            <div class="highlights">
+            <div
+              class:list={['highlights', activeSub.highlights.length <= 6 && 'is-compact']}
+              style={`--highlight-count:${Math.max(1, activeSub.highlights.length)}`}
+            >
               {activeSub.highlights.map(h => <span class="chip-lg">{h}</span>)}
             </div>
           </div>
@@ -339,6 +342,10 @@ function renderItineraryTable(t: ItineraryTable | null): string {
     flex-wrap: wrap;
     gap: 8px;
   }
+  .highlights.is-compact {
+    display: grid;
+    grid-template-columns: repeat(var(--highlight-count), minmax(0, 1fr));
+  }
   .chip-lg {
     padding: 6px 14px;
     border-radius: 999px;
@@ -346,6 +353,9 @@ function renderItineraryTable(t: ItineraryTable | null): string {
     border: 1px solid var(--color-border);
     color: var(--color-text);
     font-size: 14px;
+    text-align: center;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .table-wrap {
@@ -406,7 +416,7 @@ function renderItineraryTable(t: ItineraryTable | null): string {
     line-height: 1.85;
     font-size: clamp(15px, 1.8vw, 17px);
     white-space: pre-wrap;
-    width: min(100%, 72ch);
+    width: 100%;
     overflow-wrap: anywhere;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
@@ -433,5 +443,9 @@ function renderItineraryTable(t: ItineraryTable | null): string {
     .table-wrap :global(.itinerary-table) { min-width: 640px; }
     .table-wrap :global(.itinerary-table th),
     .table-wrap :global(.itinerary-table td) { padding: 12px 14px; }
+    .highlights.is-compact {
+      display: flex;
+      flex-wrap: wrap;
+    }
   }
 </style>

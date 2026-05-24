@@ -106,7 +106,7 @@ function normalizeDate(s: string): string | null {
 function countryTypeFromSubCards(subCards: SubCardDTO[], fallback: string | undefined): string {
   const countries = subCards.map(s => (s.country ?? '').trim()).filter(Boolean);
   if (countries.length === 0) return fallback || '国内';
-  return countries.some(c => c !== '中国' && c !== '国内') ? '国外' : '国内';
+  return countries.some(c => c !== '中国' && c !== '国内') ? '国际' : '国内';
 }
 
 /**

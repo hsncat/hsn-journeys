@@ -50,13 +50,13 @@ export default function SubCardEdit({ mode }: Props) {
         if (p) setParent(p);
         if (mode === 'edit' && subId) {
           const real = await getSubCardApi(decodeURIComponent(subId));
-          setS(real);
+          setS({ ...real, country: normalizeCountryLabel(real.country) });
         } else if (mode === 'new' && p) {
           setS(prev => ({
             ...prev,
             province: p.province,
             city: p.city,
-            country: p.country,
+            country: normalizeCountryLabel(p.country),
             date: p.date,
             endDate: p.endDate,
             emoji: p.emoji ?? '📍',
@@ -110,7 +110,7 @@ export default function SubCardEdit({ mode }: Props) {
           name: autoName,
           province: s.province,
           city: s.city,
-          country: s.country,
+          country: normalizeCountryLabel(s.country),
           date: s.date,
           endDate: s.endDate,
           emoji: s.emoji,
@@ -128,7 +128,7 @@ export default function SubCardEdit({ mode }: Props) {
           name: autoName,
           province: s.province,
           city: s.city,
-          country: s.country,
+          country: normalizeCountryLabel(s.country),
           date: s.date,
           endDate: s.endDate,
           emoji: s.emoji,
@@ -244,4 +244,8 @@ export default function SubCardEdit({ mode }: Props) {
       </div>
     </div>
   );
+}
+
+function normalizeCountryLabel(country: string | null | undefined): string | null {
+  return country === '国外' ? '国际' : (country ?? null);
 }
