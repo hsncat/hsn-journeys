@@ -107,7 +107,10 @@ export async function uploadPhoto(file: File, folder = 'journeys'): Promise<stri
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `HTTP ${res.status}`);
+    const error = String(body.error || '');
+    if (error === 'too_large_500kb') throw new Error('图片压缩后仍超过 500KB，请换一张照片');
+    if (error === 'not_image') throw new Error('只支持 JPG 或 HEIC 照片');
+    throw new Error(error || `HTTP ${res.status}`);
   }
   const { key } = await res.json() as { key: string };
   return key;

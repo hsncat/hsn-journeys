@@ -5,9 +5,19 @@ export function isSupportedUploadImage(file: File): boolean {
   const type = file.type.toLowerCase();
   return type === 'image/jpeg'
     || type === 'image/jpg'
+    || type === 'image/pjpeg'
     || type === 'image/heic'
     || type === 'image/heif'
     || /\.(jpe?g|heic|heif)$/.test(name);
+}
+
+export function imageUploadErrorMessage(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err || '');
+  if (message === 'unsupported_image_format') return '只支持 JPG 或 HEIC 照片';
+  if (message === 'heic_convert_failed') return 'HEIC 照片转换失败，请换一张 JPG 或重新选择照片';
+  if (message === 'image_load_failed') return '照片读取失败，请换一张照片';
+  if (message === 'image_compress_too_large') return '图片压缩后仍超过 500KB，请换一张照片';
+  return message || '上传失败';
 }
 
 export async function compressImageToUnder500KB(file: File): Promise<File> {
@@ -60,15 +70,11 @@ function isHeicFile(file: File): boolean {
 
 async function heicToJpeg(file: File): Promise<File> {
   try {
-    const mod = await import(/* @vite-ignore */ 'https://esm.sh/heic2any@0.0.4');
-    const convert = (mod.default ?? mod) as (options: { blob: Blob; toType: string; quality?: number }) => Promise<Blob | Blob[]>;
-    const result = await convert({ blob: file, toType: 'image/jpeg', quality: 0.9 });
+    const { default: heic2any } = await import('heic2any');
+    const result = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
     const blob = Array.isArray(result) ? result[0] : result;
     return toJpegFile(blob, file.name);
   } catch {
-    if (file.size <= MAX_IMAGE_BYTES) {
-      return new File([file], file.name, { type: file.type || 'image/heic' });
-    }
     throw new Error('heic_convert_failed');
   }
 }

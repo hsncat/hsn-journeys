@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { uploadPhoto } from '../api';
 import { toast } from './Toast';
-import { compressImageToUnder500KB, isSupportedUploadImage } from '../lib/imageCompression';
+import { compressImageToUnder500KB, imageUploadErrorMessage, isSupportedUploadImage } from '../lib/imageCompression';
 
 interface Props {
   value: string | null;
@@ -32,7 +32,7 @@ export default function PhotoUploader({ value, onChange, folder = 'journeys' }: 
       onChange(key);
       toast('上传成功', 'success');
     } catch (err) {
-      toast(err instanceof Error ? err.message : '上传失败', 'error');
+      toast(imageUploadErrorMessage(err), 'error');
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = '';

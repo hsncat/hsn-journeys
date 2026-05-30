@@ -43,6 +43,7 @@ function isAllowedPhoto(file: File): boolean {
   const name = file.name.toLowerCase();
   return type === 'image/jpeg'
     || type === 'image/jpg'
+    || type === 'image/pjpeg'
     || type === 'image/heic'
     || type === 'image/heif'
     || /\.(jpe?g|heic|heif)$/.test(name);
@@ -51,7 +52,7 @@ function isAllowedPhoto(file: File): boolean {
 function photoExtension(file: File): string {
   const type = file.type.toLowerCase();
   const ext = file.name.split('.').pop()?.toLowerCase();
-  if (type === 'image/jpeg' || type === 'image/jpg') return 'jpg';
+  if (type === 'image/jpeg' || type === 'image/jpg' || type === 'image/pjpeg') return 'jpg';
   if (type === 'image/heic') return 'heic';
   if (type === 'image/heif') return 'heif';
   return ext && ['jpg', 'jpeg', 'heic', 'heif'].includes(ext) ? (ext === 'jpeg' ? 'jpg' : ext) : 'jpg';

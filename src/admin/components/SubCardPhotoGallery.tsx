@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { uploadPhoto } from '../api';
 import { toast } from './Toast';
-import { compressImageToUnder500KB, isSupportedUploadImage } from '../lib/imageCompression';
+import { compressImageToUnder500KB, imageUploadErrorMessage, isSupportedUploadImage } from '../lib/imageCompression';
 
 interface Props {
   photos: string[];
@@ -35,6 +35,7 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
     try {
       const uploaded: string[] = [];
       let failed = 0;
+      let firstError: unknown = null;
       let workingPhotos = normalized;
       let workingCover = coverKey;
 
@@ -46,7 +47,9 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
           workingCover = workingCover || key;
           workingPhotos = normalizePhotos([...workingPhotos, key], workingCover);
           onChange(workingPhotos, workingCover, false);
-        } catch {
+        } catch (err) {
+          firstError ??= err;
+          console.error('Photo upload failed', err);
           failed += 1;
         } finally {
           setUploadProgress({ done: uploaded.length + failed, total: selected.length });
@@ -55,14 +58,14 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
 
       onChange(workingPhotos, workingCover, !coverKey && Boolean(workingCover), true);
       if (uploaded.length === 0) {
-        toast('照片上传失败，请换一张图片再试', 'error');
+        toast(imageUploadErrorMessage(firstError), 'error');
       } else if (failed > 0) {
         toast(`已上传 ${uploaded.length} 张，${failed} 张失败`, 'error');
       } else {
         toast(`照片已上传 ${uploaded.length} 张`, 'success');
       }
     } catch (err) {
-      toast(err instanceof Error ? err.message : '上传失败', 'error');
+      toast(imageUploadErrorMessage(err), 'error');
     } finally {
       setUploading(false);
       setUploadProgress(null);
