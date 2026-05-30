@@ -694,6 +694,19 @@
   border-radius: 10px;
   overflow: hidden;
   background: var(--color-surface-alt);
+  cursor: grab;
+  transition: border-color 150ms, box-shadow 150ms, opacity 150ms, transform 150ms;
+}
+.sub-photo-tile:active {
+  cursor: grabbing;
+}
+.sub-photo-tile.is-dragging {
+  opacity: 0.56;
+  transform: scale(0.98);
+}
+.sub-photo-tile.is-drag-over {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft), var(--shadow-md);
 }
 .sub-photo-preview {
   display: block;

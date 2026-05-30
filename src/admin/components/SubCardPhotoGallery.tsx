@@ -12,8 +12,11 @@ interface Props {
 
 export default function SubCardPhotoGallery({ photos, cover, folder, onChange }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const didDragRef = useRef(false);
   const [uploading, setUploading] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [draggingKey, setDraggingKey] = useState<string | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
 
   const normalized = normalizePhotos(photos, cover);
   const coverKey = cover || normalized[0] || null;
@@ -42,8 +45,23 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
   };
 
   const openPreview = (key: string) => {
+    if (didDragRef.current) {
+      didDragRef.current = false;
+      return;
+    }
     const index = normalized.findIndex(photo => photo === key);
     setPreviewIndex(index >= 0 ? index : 0);
+  };
+
+  const reorderPhotos = (sourceKey: string, targetKey: string) => {
+    if (sourceKey === targetKey) return;
+    const sourceIndex = normalized.findIndex(photo => photo === sourceKey);
+    const targetIndex = normalized.findIndex(photo => photo === targetKey);
+    if (sourceIndex < 0 || targetIndex < 0) return;
+    const next = [...normalized];
+    const [moved] = next.splice(sourceIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    onChange(next, coverKey, false);
   };
 
   const nextPreview = () => {
@@ -84,7 +102,35 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
       ) : (
         <div className="sub-photo-grid">
           {normalized.map(key => (
-            <figure className="sub-photo-tile" key={key}>
+            <figure
+              className={`sub-photo-tile ${draggingKey === key ? 'is-dragging' : ''} ${dragOverKey === key && draggingKey !== key ? 'is-drag-over' : ''}`}
+              key={key}
+              draggable
+              onDragStart={e => {
+                didDragRef.current = true;
+                setDraggingKey(key);
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', key);
+              }}
+              onDragOver={e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                setDragOverKey(key);
+              }}
+              onDragLeave={() => setDragOverKey(current => current === key ? null : current)}
+              onDrop={e => {
+                e.preventDefault();
+                const sourceKey = e.dataTransfer.getData('text/plain') || draggingKey;
+                if (sourceKey) reorderPhotos(sourceKey, key);
+                setDraggingKey(null);
+                setDragOverKey(null);
+              }}
+              onDragEnd={() => {
+                setDraggingKey(null);
+                setDragOverKey(null);
+                window.setTimeout(() => { didDragRef.current = false; }, 0);
+              }}
+            >
               <button type="button" className="sub-photo-preview" onClick={() => openPreview(key)}>
                 <img src={`/r2/${key}`} alt="" loading="lazy" />
               </button>
