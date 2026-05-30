@@ -17,9 +17,9 @@ photos.post('/', requireAdmin, async (c) => {
 
   if (!(file instanceof File)) return c.json({ error: 'missing_file' }, 400);
   if (file.size > MAX_ADMIN_PHOTO_BYTES) return c.json({ error: 'too_large_500kb' }, 413);
-  if (!file.type.startsWith('image/')) return c.json({ error: 'not_image' }, 415);
+  if (!isAllowedPhoto(file)) return c.json({ error: 'not_image' }, 415);
 
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  const ext = photoExtension(file);
   const key = `${folder}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
 
   const buffer = await file.arrayBuffer();
@@ -38,6 +38,25 @@ photos.post('/', requireAdmin, async (c) => {
 });
 
 // 删除（管理员）
+function isAllowedPhoto(file: File): boolean {
+  const type = file.type.toLowerCase();
+  const name = file.name.toLowerCase();
+  return type === 'image/jpeg'
+    || type === 'image/jpg'
+    || type === 'image/heic'
+    || type === 'image/heif'
+    || /\.(jpe?g|heic|heif)$/.test(name);
+}
+
+function photoExtension(file: File): string {
+  const type = file.type.toLowerCase();
+  const ext = file.name.split('.').pop()?.toLowerCase();
+  if (type === 'image/jpeg' || type === 'image/jpg') return 'jpg';
+  if (type === 'image/heic') return 'heic';
+  if (type === 'image/heif') return 'heif';
+  return ext && ['jpg', 'jpeg', 'heic', 'heif'].includes(ext) ? (ext === 'jpeg' ? 'jpg' : ext) : 'jpg';
+}
+
 photos.delete('/:key{.+}', requireAdmin, async (c) => {
   const key = c.req.param('key');
   await c.env.R2.delete(key);

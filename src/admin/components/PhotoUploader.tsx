@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { uploadPhoto } from '../api';
 import { toast } from './Toast';
-import { compressImageToUnder500KB } from '../lib/imageCompression';
+import { compressImageToUnder500KB, isSupportedUploadImage } from '../lib/imageCompression';
 
 interface Props {
   value: string | null;
@@ -21,8 +21,8 @@ export default function PhotoUploader({ value, onChange, folder = 'journeys' }: 
   }, [value]);
 
   const handleFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      toast('请选择图片文件', 'error');
+    if (!isSupportedUploadImage(file)) {
+      toast('请选择 JPG 或 HEIC 照片', 'error');
       return;
     }
     setUploading(true);
@@ -54,7 +54,7 @@ export default function PhotoUploader({ value, onChange, folder = 'journeys' }: 
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept=".jpg,.jpeg,.heic,.heif,image/jpeg,image/heic,image/heif"
         hidden
         onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])}
       />
@@ -95,7 +95,7 @@ export default function PhotoUploader({ value, onChange, folder = 'journeys' }: 
           <div style={{ fontSize: 40, color: 'var(--color-text-faint)' }}>📷</div>
           <div className="upload-hint" style={{ marginTop: 8 }}>
             点击或拖拽图片到此处<br />
-            <small style={{ color: 'var(--color-text-faint)' }}>会自动压缩到 500KB 以内</small>
+            <small style={{ color: 'var(--color-text-faint)' }}>支持 JPG / HEIC，自动压缩到 500KB 以内</small>
           </div>
         </>
       )}

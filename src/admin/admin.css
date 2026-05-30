@@ -702,21 +702,6 @@
   color: var(--color-text-muted);
   font-size: 13px;
 }
-.sub-photo-toolbar button {
-  flex: 0 0 auto;
-  border: 0;
-  border-radius: 999px;
-  padding: 8px 14px;
-  background: var(--color-primary);
-  color: var(--color-text-inverse);
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-.sub-photo-toolbar button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
 .sub-photo-tile {
   position: relative;
   margin: 0;

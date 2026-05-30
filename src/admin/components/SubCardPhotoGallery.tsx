@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { uploadPhoto } from '../api';
 import { toast } from './Toast';
-import { compressImageToUnder500KB } from '../lib/imageCompression';
+import { compressImageToUnder500KB, isSupportedUploadImage } from '../lib/imageCompression';
 
 interface Props {
   photos: string[];
@@ -24,8 +24,11 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
   const previewKey = previewIndex === null ? null : normalized[previewIndex] ?? null;
 
   const handleFiles = async (files: FileList | null) => {
-    const selected = Array.from(files ?? []).filter(file => file.type.startsWith('image/'));
-    if (selected.length === 0) return;
+    const selected = Array.from(files ?? []).filter(isSupportedUploadImage);
+    if (selected.length === 0) {
+      toast('请选择 JPG 或 HEIC 照片', 'error');
+      return;
+    }
 
     setUploading(true);
     setUploadProgress({ done: 0, total: selected.length });
@@ -113,7 +116,7 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept=".jpg,.jpeg,.heic,.heif,image/jpeg,image/heic,image/heif"
         multiple
         hidden
         onChange={e => handleFiles(e.target.files)}
@@ -126,9 +129,6 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
         <div className="sub-photo-grid-wrap">
           <div className="sub-photo-toolbar">
             <span>已上传 {normalized.length} 张</span>
-            <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}>
-              {uploading && uploadProgress ? `上传中 ${uploadProgress.done}/${uploadProgress.total}` : '继续上传照片'}
-            </button>
           </div>
           <div className="sub-photo-grid">
             {normalized.map(key => (
