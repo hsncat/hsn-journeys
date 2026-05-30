@@ -686,6 +686,10 @@
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
 }
+.sub-photo-grid-wrap {
+  display: grid;
+  gap: 10px;
+}
 .sub-photo-tile {
   position: relative;
   margin: 0;
@@ -778,6 +782,29 @@
 }
 .sub-photo-actions button:hover { background: var(--color-surface); }
 .sub-photo-actions button.danger { color: var(--color-danger); }
+.sub-photo-progress {
+  display: grid;
+  gap: 6px;
+  padding: 9px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+.sub-photo-progress div {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-surface-alt);
+}
+.sub-photo-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transition: width 150ms ease;
+}
 .photo-lightbox {
   position: fixed;
   inset: 0;

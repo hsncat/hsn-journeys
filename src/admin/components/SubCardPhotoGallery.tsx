@@ -14,6 +14,7 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
   const inputRef = useRef<HTMLInputElement>(null);
   const didDragRef = useRef(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
@@ -25,21 +26,33 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
   const handleFiles = async (files: FileList | null) => {
     const selected = Array.from(files ?? []).filter(file => file.type.startsWith('image/'));
     if (selected.length === 0) return;
+
     setUploading(true);
+    setUploadProgress({ done: 0, total: selected.length });
     try {
       const uploaded: string[] = [];
+      let workingPhotos = normalized;
+      let workingCover = coverKey;
+
       for (const file of selected) {
         const compressed = await compressImageToUnder500KB(file);
-        uploaded.push(await uploadPhoto(compressed, folder));
+        const key = await uploadPhoto(compressed, folder);
+        uploaded.push(key);
+        workingCover = workingCover || key;
+        workingPhotos = normalizePhotos([...workingPhotos, key], workingCover);
+        onChange(workingPhotos, workingCover, false);
+        setUploadProgress({ done: uploaded.length, total: selected.length });
       }
-      const nextCover = coverKey || uploaded[0] || null;
-      const next = normalizePhotos([...normalized, ...uploaded], nextCover);
-      onChange(next, nextCover, !coverKey && Boolean(nextCover));
-      toast('照片已上传', 'success');
+
+      if (!coverKey && workingCover) {
+        onChange(workingPhotos, workingCover, true);
+      }
+      toast(`照片已上传 ${uploaded.length} 张`, 'success');
     } catch (err) {
       toast(err instanceof Error ? err.message : '上传失败', 'error');
     } finally {
       setUploading(false);
+      setUploadProgress(null);
       if (inputRef.current) inputRef.current.value = '';
     }
   };
@@ -96,60 +109,70 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
         onChange={e => handleFiles(e.target.files)}
       />
       {normalized.length === 0 ? (
-        <button type="button" className="sub-photo-empty" onClick={() => inputRef.current?.click()}>
-          点击上传照片
+        <button type="button" className="sub-photo-empty" onClick={() => inputRef.current?.click()} disabled={uploading}>
+          {uploading && uploadProgress ? `上传中 ${uploadProgress.done}/${uploadProgress.total}` : '点击上传照片'}
         </button>
       ) : (
-        <div className="sub-photo-grid">
-          {normalized.map(key => (
-            <figure
-              className={`sub-photo-tile ${draggingKey === key ? 'is-dragging' : ''} ${dragOverKey === key && draggingKey !== key ? 'is-drag-over' : ''}`}
-              key={key}
-              draggable
-              onDragStart={e => {
-                didDragRef.current = true;
-                setDraggingKey(key);
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/plain', key);
-              }}
-              onDragOver={e => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                setDragOverKey(key);
-              }}
-              onDragLeave={() => setDragOverKey(current => current === key ? null : current)}
-              onDrop={e => {
-                e.preventDefault();
-                const sourceKey = e.dataTransfer.getData('text/plain') || draggingKey;
-                if (sourceKey) reorderPhotos(sourceKey, key);
-                setDraggingKey(null);
-                setDragOverKey(null);
-              }}
-              onDragEnd={() => {
-                setDraggingKey(null);
-                setDragOverKey(null);
-                window.setTimeout(() => { didDragRef.current = false; }, 0);
-              }}
+        <div className="sub-photo-grid-wrap">
+          <div className="sub-photo-grid">
+            {normalized.map(key => (
+              <figure
+                className={`sub-photo-tile ${draggingKey === key ? 'is-dragging' : ''} ${dragOverKey === key && draggingKey !== key ? 'is-drag-over' : ''}`}
+                key={key}
+                draggable={!uploading}
+                onDragStart={e => {
+                  didDragRef.current = true;
+                  setDraggingKey(key);
+                  e.dataTransfer.effectAllowed = 'move';
+                  e.dataTransfer.setData('text/plain', key);
+                }}
+                onDragOver={e => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  setDragOverKey(key);
+                }}
+                onDragLeave={() => setDragOverKey(current => current === key ? null : current)}
+                onDrop={e => {
+                  e.preventDefault();
+                  const sourceKey = e.dataTransfer.getData('text/plain') || draggingKey;
+                  if (sourceKey) reorderPhotos(sourceKey, key);
+                  setDraggingKey(null);
+                  setDragOverKey(null);
+                }}
+                onDragEnd={() => {
+                  setDraggingKey(null);
+                  setDragOverKey(null);
+                  window.setTimeout(() => { didDragRef.current = false; }, 0);
+                }}
+              >
+                <button type="button" className="sub-photo-preview" onClick={() => openPreview(key)}>
+                  <img src={`/r2/${key}`} alt="" loading="lazy" />
+                </button>
+                {coverKey === key && <figcaption>封面</figcaption>}
+                <div className="sub-photo-actions">
+                  <button type="button" onClick={() => setSubCover(key)}>设置为子卡片封面</button>
+                  <button type="button" onClick={() => setJourneyCover(key)}>设为封面</button>
+                  <button type="button" className="danger" onClick={() => removePhoto(key)}>移除</button>
+                </div>
+              </figure>
+            ))}
+            <button
+              type="button"
+              className="sub-photo-add-tile"
+              onClick={() => inputRef.current?.click()}
+              disabled={uploading}
             >
-              <button type="button" className="sub-photo-preview" onClick={() => openPreview(key)}>
-                <img src={`/r2/${key}`} alt="" loading="lazy" />
-              </button>
-              {coverKey === key && <figcaption>封面</figcaption>}
-              <div className="sub-photo-actions">
-                <button type="button" onClick={() => setSubCover(key)}>设置为子卡片封面</button>
-                <button type="button" onClick={() => setJourneyCover(key)}>设为封面</button>
-                <button type="button" className="danger" onClick={() => removePhoto(key)}>移除</button>
+              {uploading && uploadProgress ? `上传中 ${uploadProgress.done}/${uploadProgress.total}` : '+ 添加照片'}
+            </button>
+          </div>
+          {uploading && uploadProgress && (
+            <div className="sub-photo-progress" role="status" aria-live="polite">
+              <span>上传中 {uploadProgress.done}/{uploadProgress.total}</span>
+              <div>
+                <i style={{ width: `${Math.round((uploadProgress.done / uploadProgress.total) * 100)}%` }} />
               </div>
-            </figure>
-          ))}
-          <button
-            type="button"
-            className="sub-photo-add-tile"
-            onClick={() => inputRef.current?.click()}
-            disabled={uploading}
-          >
-            {uploading ? '上传中...' : '+ 添加照片'}
-          </button>
+            </div>
+          )}
         </div>
       )}
       {previewKey && (
