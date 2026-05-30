@@ -124,6 +124,12 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
         </button>
       ) : (
         <div className="sub-photo-grid-wrap">
+          <div className="sub-photo-toolbar">
+            <span>已上传 {normalized.length} 张</span>
+            <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}>
+              {uploading && uploadProgress ? `上传中 ${uploadProgress.done}/${uploadProgress.total}` : '继续上传照片'}
+            </button>
+          </div>
           <div className="sub-photo-grid">
             {normalized.map(key => (
               <figure
