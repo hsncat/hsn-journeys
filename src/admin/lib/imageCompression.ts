@@ -31,8 +31,19 @@ export async function compressImageToUnder500KB(file: File): Promise<File> {
     return toJpegFile(bestBlob, file.name);
   }
 
-  const fallback = await drawToJpeg(bitmap, 360, Math.max(1, Math.round(360 * bitmap.height / bitmap.width)), 0.42);
-  return toJpegFile(fallback, file.name);
+  for (const side of [360, 320, 280, 240, 200, 160]) {
+    const scale = Math.min(1, side / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    for (const q of [0.42, 0.34, 0.28, 0.22]) {
+      const blob = await drawToJpeg(bitmap, width, height, q);
+      if (blob.size <= MAX_IMAGE_BYTES) return toJpegFile(blob, file.name);
+      if (!bestBlob || blob.size < bestBlob.size) bestBlob = blob;
+    }
+  }
+
+  if (bestBlob && bestBlob.size <= MAX_IMAGE_BYTES) return toJpegFile(bestBlob, file.name);
+  throw new Error('image_compress_too_large');
 }
 
 function toJpegFile(blob: Blob, originalName: string): File {

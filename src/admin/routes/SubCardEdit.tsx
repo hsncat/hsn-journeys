@@ -103,18 +103,21 @@ export default function SubCardEdit({ mode }: Props) {
     photoUrls: string[],
     photoUrl: string | null,
     shouldSyncJourneyPhoto = false,
+    shouldSaveNow = false,
   ) => {
     setS(prev => ({ ...prev, photoUrls, photoUrl }));
     setSyncJourneyPhoto(shouldSyncJourneyPhoto);
-    if (mode !== 'edit' || !s.id || !shouldSyncJourneyPhoto) return;
+    if (mode !== 'edit' || !s.id || (!shouldSyncJourneyPhoto && !shouldSaveNow)) return;
     try {
-      await updateSubCardApi(s.id, { photoUrl, photoUrls, syncJourneyPhoto: true });
+      await updateSubCardApi(s.id, { photoUrl, photoUrls, syncJourneyPhoto: shouldSyncJourneyPhoto });
       setSyncJourneyPhoto(false);
-      setParent(prev => prev ? { ...prev, photoUrl } : prev);
-      setAllJourneys(prev => prev.map(jj => jj.id === s.journeyId ? { ...jj, photoUrl } : jj));
-      toast('一级卡片封面已同步', 'success');
+      if (shouldSyncJourneyPhoto) {
+        setParent(prev => prev ? { ...prev, photoUrl } : prev);
+        setAllJourneys(prev => prev.map(jj => jj.id === s.journeyId ? { ...jj, photoUrl } : jj));
+        toast('一级卡片封面已同步', 'success');
+      }
     } catch (err) {
-      toast(err instanceof Error ? err.message : '同步一级卡片封面失败', 'error');
+      toast(err instanceof Error ? err.message : '照片保存失败', 'error');
     }
   };
 

@@ -7,7 +7,7 @@ interface Props {
   photos: string[];
   cover: string | null;
   folder: string;
-  onChange: (photos: string[], cover: string | null, syncJourneyCover?: boolean) => void;
+  onChange: (photos: string[], cover: string | null, syncJourneyCover?: boolean, saveNow?: boolean) => void;
 }
 
 export default function SubCardPhotoGallery({ photos, cover, folder, onChange }: Props) {
@@ -31,23 +31,33 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
     setUploadProgress({ done: 0, total: selected.length });
     try {
       const uploaded: string[] = [];
+      let failed = 0;
       let workingPhotos = normalized;
       let workingCover = coverKey;
 
       for (const file of selected) {
-        const compressed = await compressImageToUnder500KB(file);
-        const key = await uploadPhoto(compressed, folder);
-        uploaded.push(key);
-        workingCover = workingCover || key;
-        workingPhotos = normalizePhotos([...workingPhotos, key], workingCover);
-        onChange(workingPhotos, workingCover, false);
-        setUploadProgress({ done: uploaded.length, total: selected.length });
+        try {
+          const compressed = await compressImageToUnder500KB(file);
+          const key = await uploadPhoto(compressed, folder);
+          uploaded.push(key);
+          workingCover = workingCover || key;
+          workingPhotos = normalizePhotos([...workingPhotos, key], workingCover);
+          onChange(workingPhotos, workingCover, false);
+        } catch {
+          failed += 1;
+        } finally {
+          setUploadProgress({ done: uploaded.length + failed, total: selected.length });
+        }
       }
 
-      if (!coverKey && workingCover) {
-        onChange(workingPhotos, workingCover, true);
+      onChange(workingPhotos, workingCover, !coverKey && Boolean(workingCover), true);
+      if (uploaded.length === 0) {
+        toast('照片上传失败，请换一张图片再试', 'error');
+      } else if (failed > 0) {
+        toast(`已上传 ${uploaded.length} 张，${failed} 张失败`, 'error');
+      } else {
+        toast(`照片已上传 ${uploaded.length} 张`, 'success');
       }
-      toast(`照片已上传 ${uploaded.length} 张`, 'success');
     } catch (err) {
       toast(err instanceof Error ? err.message : '上传失败', 'error');
     } finally {
@@ -74,7 +84,7 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
     const next = [...normalized];
     const [moved] = next.splice(sourceIndex, 1);
     next.splice(targetIndex, 0, moved);
-    onChange(next, coverKey, false);
+    onChange(next, coverKey, false, true);
   };
 
   const nextPreview = () => {
@@ -83,18 +93,18 @@ export default function SubCardPhotoGallery({ photos, cover, folder, onChange }:
   };
 
   const setSubCover = (key: string) => {
-    onChange(normalized, key, false);
+    onChange(normalized, key, false, true);
     toast('已设置为子卡片封面', 'success');
   };
 
   const setJourneyCover = (key: string) => {
-    onChange(normalized, key, true);
+    onChange(normalized, key, true, true);
     toast('已设为封面，并同步到一级卡片', 'success');
   };
 
   const removePhoto = (key: string) => {
     const next = normalized.filter(photo => photo !== key);
-    onChange(next, coverKey === key ? (next[0] ?? null) : coverKey, false);
+    onChange(next, coverKey === key ? (next[0] ?? null) : coverKey, false, true);
     if (previewKey === key) setPreviewIndex(null);
   };
 
