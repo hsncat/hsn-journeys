@@ -1,15 +1,16 @@
 ---
 import Layout from '@/components/Layout.astro';
 import { icon } from '@/lib/icons';
-import { listJourneys, getSiteSettings } from '@/server/db';
+import { listConcerts, listJourneys, getSiteSettings } from '@/server/db';
 import { fmtDateRange, daysBetween } from '@/lib/format';
 import { isDomestic } from '@/lib/locations';
 
 export const prerender = false;
 
 const env = Astro.locals.runtime.env;
-const [journeys, settings] = await Promise.all([
+const [journeys, concerts, settings] = await Promise.all([
   listJourneys(env.DB),
+  listConcerts(env.DB),
   getSiteSettings(env.DB),
 ]);
 
@@ -50,6 +51,10 @@ const heroSub = settings.hero_subtitle || '记录美好生活';
             <Fragment set:html={icon('mapPinned', { size: 18 })} />
             <span>足迹地图</span>
           </a>
+          <a href="/concerts" class="btn-ghost">
+            <Fragment set:html={icon('ticket', { size: 18 })} />
+            <span>演唱会</span>
+          </a>
         </div>
       </div>
       <div class="hero-glow" aria-hidden="true"></div>
@@ -68,6 +73,10 @@ const heroSub = settings.hero_subtitle || '记录美好生活';
       <div class="stat-card">
         <span class="stat-number tabular">{photoCount}</span>
         <span class="stat-label">精彩瞬间</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number tabular">{concerts.length}</span>
+        <span class="stat-label">演唱会</span>
       </div>
     </section>
 
@@ -205,7 +214,7 @@ const heroSub = settings.hero_subtitle || '记录美好生活';
 
   .stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 16px;
     margin: 32px 0 64px;
   }
@@ -238,7 +247,7 @@ const heroSub = settings.hero_subtitle || '记录美好生活';
     letter-spacing: 0.5px;
   }
   @media (max-width: 640px) {
-    .stats { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
     .stat-card { padding: 24px 8px; }
     .stat-number { font-size: 40px; }
   }

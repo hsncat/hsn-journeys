@@ -1,0 +1,189 @@
+---
+import Layout from '@/components/Layout.astro';
+import { icon } from '@/lib/icons';
+import { listConcerts } from '@/server/db';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime.env;
+const concerts = await listConcerts(env.DB);
+const total = concerts.reduce((sum, item) => sum + item.cost, 0);
+
+const fmtDate = (date: string) => date.replaceAll('-', '.');
+const fmtMoney = (value: number) => value.toLocaleString('zh-CN', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+---
+
+<Layout title="演唱会" active="concerts">
+  <main class="concerts-page">
+    <header class="hero hero--compact">
+      <p class="eyebrow">Concerts</p>
+      <h1>演唱会</h1>
+      <p class="sub">把每一次现场的光和声音都留在这里</p>
+    </header>
+
+    <section class="concert-stats" aria-label="演唱会统计">
+      <div>
+        <span class="stat-number">{concerts.length}</span>
+        <span class="stat-label">场演唱会</span>
+      </div>
+      <div>
+        <span class="stat-number">¥{fmtMoney(total)}</span>
+        <span class="stat-label">累计票价</span>
+      </div>
+    </section>
+
+    <section class="concert-table-section">
+      {concerts.length === 0 ? (
+        <div class="empty">
+          <Fragment set:html={icon('ticket', { size: 48 })} />
+          <h3>还没有演唱会记录</h3>
+        </div>
+      ) : (
+        <div class="concert-table-wrap">
+          <table class="concert-table">
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>歌手</th>
+                <th>演唱会</th>
+                <th>地点</th>
+                <th>金额</th>
+              </tr>
+            </thead>
+            <tbody>
+              {concerts.map(item => (
+                <tr>
+                  <td class="tabular">{fmtDate(item.date)}</td>
+                  <td>{item.artist}</td>
+                  <td>{item.title}</td>
+                  <td>{item.venue}</td>
+                  <td class="money">¥{fmtMoney(item.cost)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .concerts-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 48px 24px 0;
+  }
+  .hero--compact {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    font-size: 11px;
+    color: var(--color-text-subtle);
+    margin: 0 0 8px;
+  }
+  .hero--compact h1 {
+    font-size: clamp(40px, 6vw, 60px);
+    margin: 0;
+  }
+  .sub {
+    color: var(--color-text-muted);
+    font-size: 15px;
+    margin: 8px 0 0;
+  }
+  .concert-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin: 0 0 28px;
+  }
+  .concert-stats > div {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 24px 18px;
+    text-align: center;
+  }
+  .stat-number {
+    display: block;
+    font-family: var(--font-display);
+    color: var(--color-primary);
+    font-size: clamp(36px, 5vw, 52px);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-label {
+    display: block;
+    margin-top: 8px;
+    color: var(--color-text-muted);
+    font-size: 14px;
+  }
+  .concert-table-section {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .concert-table-wrap {
+    overflow-x: auto;
+  }
+  .concert-table {
+    width: 100%;
+    min-width: 760px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 14px;
+  }
+  .concert-table th {
+    padding: 14px 16px;
+    text-align: center;
+    background: var(--color-surface-alt);
+    color: var(--color-primary);
+    font-weight: 700;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .concert-table td {
+    padding: 15px 16px;
+    border-bottom: 1px solid var(--color-border);
+    line-height: 1.6;
+    vertical-align: middle;
+  }
+  .concert-table tr:last-child td {
+    border-bottom: 0;
+  }
+  .concert-table tbody tr:hover td {
+    background: var(--color-bg);
+  }
+  .concert-table td:nth-child(2) {
+    font-weight: 700;
+  }
+  .money {
+    text-align: right;
+    font-weight: 700;
+    color: var(--color-accent);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .empty {
+    text-align: center;
+    padding: 72px 24px;
+    color: var(--color-text-subtle);
+  }
+  .empty svg { color: var(--color-warning); }
+  .empty h3 { font-size: 24px; margin: 16px 0 0; }
+
+  @media (max-width: 640px) {
+    .concerts-page { padding: 36px 16px 0; }
+    .concert-stats { grid-template-columns: 1fr; }
+  }
+</style>

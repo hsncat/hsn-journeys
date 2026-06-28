@@ -2,7 +2,7 @@
  * 后台 fetch 封装
  */
 
-import type { JourneyDTO, SubCardDTO, WishlistDTO, CityCoordRow, PackingRow } from '@/server/db';
+import type { JourneyDTO, SubCardDTO, WishlistDTO, CityCoordRow, PackingRow, ConcertDTO } from '@/server/db';
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -94,6 +94,16 @@ export const updatePackingApi = (id: number, data: Partial<PackingRow>) =>
   request<{ item: PackingRow }>(`/api/packing/${id}`, { method: 'PUT', body: JSON.stringify(data) }).then(r => r.item);
 export const deletePackingApi = (id: number) =>
   request(`/api/packing/${id}`, { method: 'DELETE' });
+
+// Concerts
+export const listConcertsApi = () =>
+  request<{ concerts: ConcertDTO[] }>('/api/concerts').then(r => r.concerts);
+export const createConcertApi = (data: Partial<ConcertDTO>) =>
+  request<{ concert: ConcertDTO }>('/api/concerts', { method: 'POST', body: JSON.stringify(data) }).then(r => r.concert);
+export const updateConcertApi = (id: number, data: Partial<ConcertDTO>) =>
+  request<{ concert: ConcertDTO }>(`/api/concerts/${id}`, { method: 'PUT', body: JSON.stringify(data) }).then(r => r.concert);
+export const deleteConcertApi = (id: number) =>
+  request(`/api/concerts/${id}`, { method: 'DELETE' });
 
 // Photo upload
 export async function uploadPhoto(file: File, folder = 'journeys'): Promise<string> {

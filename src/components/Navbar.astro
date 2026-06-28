@@ -2,7 +2,7 @@
 import { icon } from '@/lib/icons';
 
 interface Props {
-  active?: 'home' | 'cities' | 'map' | 'wishlist';
+  active?: 'home' | 'cities' | 'map' | 'wishlist' | 'concerts';
 }
 
 const { active } = Astro.props;
@@ -12,6 +12,7 @@ const items: { key: NonNullable<Props['active']>; href: string; label: string }[
   { key: 'cities', href: '/cities', label: '城市足迹' },
   { key: 'map', href: '/map', label: '足迹地图' },
   { key: 'wishlist', href: '/wishlist', label: '心愿单' },
+  { key: 'concerts', href: '/concerts', label: '演唱会' },
 ];
 ---
 

@@ -73,6 +73,18 @@ export interface PackingRow {
   sort_order: number;
 }
 
+export interface ConcertRow {
+  id: number;
+  date: string;
+  artist: string;
+  title: string;
+  venue: string;
+  cost: number;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface UserRow {
   id: number;
   username: string;
@@ -144,6 +156,16 @@ export interface WishlistDTO {
   duration: string | null;
   description: string | null;
   highlights: string[];
+  sortOrder: number;
+}
+
+export interface ConcertDTO {
+  id: number;
+  date: string;
+  artist: string;
+  title: string;
+  venue: string;
+  cost: number;
   sortOrder: number;
 }
 
@@ -249,6 +271,18 @@ export function wishlistRowToDTO(row: WishlistRow): WishlistDTO {
   };
 }
 
+export function concertRowToDTO(row: ConcertRow): ConcertDTO {
+  return {
+    id: row.id,
+    date: row.date,
+    artist: row.artist,
+    title: row.title,
+    venue: row.venue,
+    cost: Number(row.cost) || 0,
+    sortOrder: row.sort_order,
+  };
+}
+
 // -------- 查询封装 --------
 export async function listJourneys(db: D1Database): Promise<JourneyDTO[]> {
   const journeys = await db.prepare('SELECT * FROM journeys ORDER BY date DESC, id DESC').all<JourneyRow>();
@@ -282,6 +316,11 @@ export async function listCoords(db: D1Database): Promise<CityCoordRow[]> {
 export async function listPacking(db: D1Database): Promise<PackingRow[]> {
   const rows = await db.prepare('SELECT * FROM packing_items ORDER BY sort_order, id').all<PackingRow>();
   return rows.results ?? [];
+}
+
+export async function listConcerts(db: D1Database): Promise<ConcertDTO[]> {
+  const rows = await db.prepare('SELECT * FROM concerts ORDER BY date DESC, sort_order, id').all<ConcertRow>();
+  return (rows.results ?? []).map(concertRowToDTO);
 }
 
 export async function getSiteSettings(db: D1Database): Promise<Record<string, string>> {

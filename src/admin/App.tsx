@@ -9,6 +9,7 @@ import WishlistList from './routes/WishlistList';
 import WishlistEdit from './routes/WishlistEdit';
 import CoordsEdit from './routes/CoordsEdit';
 import PackingEdit from './routes/PackingEdit';
+import ConcertsEdit from './routes/ConcertsEdit';
 import ChangePasswordModal from './components/ChangePasswordModal';
 import ToastStack from './components/Toast';
 import './admin.css';
@@ -55,6 +56,9 @@ function AppShell({ username }: Props) {
           <NavLink to="/packing" className={({ isActive }) => isActive ? 'is-active' : ''}>
             <span>🧳</span> 行李清单
           </NavLink>
+          <NavLink to="/concerts" className={({ isActive }) => isActive ? 'is-active' : ''}>
+            <span>🎫</span> 演唱会
+          </NavLink>
           <NavLink to="/coords" className={({ isActive }) => isActive ? 'is-active' : ''}>
             <span>📍</span> 城市坐标
           </NavLink>
@@ -87,6 +91,7 @@ function AppShell({ username }: Props) {
           <Route path="/wishlist/:id" element={<WishlistEdit mode="edit" />} />
           <Route path="/coords" element={<CoordsEdit />} />
           <Route path="/packing" element={<PackingEdit />} />
+          <Route path="/concerts" element={<ConcertsEdit />} />
         </Routes>
       </main>
 

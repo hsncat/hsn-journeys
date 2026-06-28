@@ -606,6 +606,67 @@
   cursor: col-resize;
   z-index: 3;
 }
+
+/* ----- Concerts ----- */
+.concert-admin-actions {
+  display: inline-flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.concert-admin-card {
+  padding: 0;
+  overflow: hidden;
+}
+.concert-admin-summary {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.concert-admin-summary span:last-child {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+.concert-admin-table-wrap {
+  overflow-x: auto;
+}
+.concert-admin-table {
+  min-width: 920px;
+}
+.concert-admin-table th {
+  text-align: center;
+}
+.concert-admin-table input {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+.concert-admin-table input:focus {
+  outline: 0;
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-focus);
+}
+.concert-admin-table td:nth-child(1) { width: 150px; }
+.concert-admin-table td:nth-child(2) { width: 140px; }
+.concert-admin-table td:nth-child(4) { width: 170px; }
+.concert-admin-table td:nth-child(5) { width: 130px; }
+.concert-admin-table td:nth-child(5) input {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.concert-admin-table td:last-child {
+  width: 88px;
+  text-align: right;
+}
 /* ----- Photo uploader ----- */
 .photo-uploader {
   border: 2px dashed var(--color-border-strong);

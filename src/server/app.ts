@@ -13,8 +13,9 @@ import subCards from './routes/sub-cards';
 import wishlist from './routes/wishlist';
 import coords from './routes/coords';
 import packing from './routes/packing';
+import concerts from './routes/concerts';
 import photos from './routes/photos';
-import { listCoords, listJourneys, listPacking, listWishlist, getSiteSettings } from './db';
+import { listConcerts, listCoords, listJourneys, listPacking, listWishlist, getSiteSettings } from './db';
 
 export function createApp() {
   const app = new Hono<AppBindings>().basePath('/api');
@@ -24,14 +25,15 @@ export function createApp() {
 
   // 公开聚合数据（首页/地图等用一次拿全）
   app.get('/bootstrap', async (c) => {
-    const [journeys, wishlist, coords, packing, settings] = await Promise.all([
+    const [journeys, wishlist, coords, packing, concerts, settings] = await Promise.all([
       listJourneys(c.env.DB),
       listWishlist(c.env.DB),
       listCoords(c.env.DB),
       listPacking(c.env.DB),
+      listConcerts(c.env.DB),
       getSiteSettings(c.env.DB),
     ]);
-    return c.json({ journeys, wishlist, coords, packing, settings });
+    return c.json({ journeys, wishlist, coords, packing, concerts, settings });
   });
 
   // 子路由
@@ -41,6 +43,7 @@ export function createApp() {
   app.route('/wishlist', wishlist);
   app.route('/coords', coords);
   app.route('/packing', packing);
+  app.route('/concerts', concerts);
   app.route('/photos', photos);
 
   // Fallback
