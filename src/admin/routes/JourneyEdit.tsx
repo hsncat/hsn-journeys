@@ -61,6 +61,7 @@ export default function JourneyEdit({ mode }: Props) {
   const [j, setJ] = useState<JourneyDTO>(blankJourney());
   const [loading, setLoading] = useState(mode === 'edit');
   const [creatingDraft, setCreatingDraft] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (mode === 'edit') {
@@ -167,6 +168,25 @@ export default function JourneyEdit({ mode }: Props) {
     }
   };
 
+  const handleSave = async () => {
+    if (mode !== 'edit') return;
+    setSaving(true);
+    try {
+      const fresh = await updateJourneyApi(id, {
+        emoji: autoJourney.emoji,
+        story: autoJourney.story,
+        highlights: autoJourney.highlights,
+        photoUrl: autoJourney.photoUrl,
+      });
+      setJ(fresh);
+      toast('已保存', 'success');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : '保存失败', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDeleteSub = async (sid: string) => {
     if (!confirm('删除这个子卡片？')) return;
     try {
@@ -192,7 +212,12 @@ export default function JourneyEdit({ mode }: Props) {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {mode === 'edit' && (
-            <a href={`/detail/${id}`} target="_blank" rel="noopener" className="btn btn-ghost">预览</a>
+            <>
+              <a href={`/detail/${id}`} target="_blank" rel="noopener" className="btn btn-ghost">预览</a>
+              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+                {saving ? '保存中…' : '保存'}
+              </button>
+            </>
           )}
           {mode === 'new' && (
             <button
