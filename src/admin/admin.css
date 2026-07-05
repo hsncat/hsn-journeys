@@ -451,8 +451,13 @@
 }
 .itinerary-editor table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 13px;
+}
+.itinerary-editor th:first-child,
+.itinerary-editor td:first-child {
+  width: 25%;
 }
 .itinerary-editor th, .itinerary-editor td {
   border: 1px solid var(--color-border);
