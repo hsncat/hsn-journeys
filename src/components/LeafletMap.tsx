@@ -33,7 +33,18 @@ function estimateCoord(name: string, country: string | null, type: 'domestic' | 
   if (type === 'domestic') {
     return { lat: 22 + (h % 10000) / 10000 * 26, lng: 78 + ((h >> 13) % 10000) / 10000 * 48 };
   }
-  return { lat: -45 + (h % 10000) / 10000 * 110, lng: -170 + ((h >> 13) % 10000) / 10000 * 340 };
+  return { lat: 30 + (h % 10000) / 10000 * 28, lng: -10 + ((h >> 13) % 10000) / 10000 * 155 };
+}
+
+function findCoord(
+  loc: Props['locations'][number],
+  coordMap: Map<string, CityCoordRow>,
+  countryMap: Map<string, CityCoordRow>,
+): CityCoordRow | undefined {
+  return coordMap.get(loc.name)
+    ?? (loc.country ? coordMap.get(loc.country) : undefined)
+    ?? countryMap.get(loc.name)
+    ?? (loc.country ? countryMap.get(loc.country) : undefined);
 }
 
 export default function LeafletMap({ coords, locations }: Props) {
@@ -70,12 +81,16 @@ export default function LeafletMap({ coords, locations }: Props) {
 
       // 聚合 location → marker
       const coordMap = new Map<string, CityCoordRow>();
-      coords.forEach(c => coordMap.set(c.name, c));
+      const countryMap = new Map<string, CityCoordRow>();
+      coords.forEach(c => {
+        coordMap.set(c.name, c);
+        if (!countryMap.has(c.country)) countryMap.set(c.country, c);
+      });
 
       const markers: JourneyMarker[] = [];
       const locMap = new Map<string, JourneyMarker>();
       locations.forEach(loc => {
-        const known = coordMap.get(loc.name);
+        const known = findCoord(loc, coordMap, countryMap);
         const point = known
           ? { lat: known.lat, lng: known.lng, estimated: false }
           : { ...estimateCoord(loc.name, loc.country, loc.type), estimated: true };
@@ -123,13 +138,13 @@ export default function LeafletMap({ coords, locations }: Props) {
       });
 
       if (markers.length) {
-        const knownBounds = L.latLngBounds([]);
+        const visibleBounds = L.latLngBounds([]);
         markers
-          .filter(m => !m.estimated && m.lng >= -20 && m.lng <= 150 && m.lat >= 5 && m.lat <= 65)
-          .forEach(m => knownBounds.extend([m.lat, m.lng]));
+          .filter(m => m.lng >= -20 && m.lng <= 150 && m.lat >= 5 && m.lat <= 65)
+          .forEach(m => visibleBounds.extend([m.lat, m.lng]));
 
-        if (knownBounds.isValid()) {
-          map.fitBounds(knownBounds, { padding: [56, 56], maxZoom: 5 });
+        if (visibleBounds.isValid()) {
+          map.fitBounds(visibleBounds, { padding: [56, 56], maxZoom: 5 });
         } else {
           map.fitBounds([[15, -10], [58, 145]], { padding: [56, 56], maxZoom: 5 });
         }

@@ -13,14 +13,24 @@ const [coords, journeys] = await Promise.all([
   listJourneys(env.DB),
 ]);
 
-const locations = journeys.flatMap(j =>
-  generateLocations(j).map(loc => ({
-    name: loc.name,
-    country: loc.country ?? j.country,
-    type: (isDomestic(loc.country ?? j.country) ? 'domestic' : 'international') as 'domestic' | 'international',
-    journeyTitles: [j.title],
-  }))
-);
+const locations = journeys.flatMap(j => {
+  const sources = j.subCards.length
+    ? j.subCards.map(s => ({
+      city: s.city || j.city,
+      province: s.province || j.province,
+      country: s.country || j.country,
+    }))
+    : [j];
+
+  return sources.flatMap(source =>
+    generateLocations(source).map(loc => ({
+      name: loc.name,
+      country: loc.country ?? source.country ?? j.country,
+      type: (isDomestic(loc.country ?? source.country ?? j.country) ? 'domestic' : 'international') as 'domestic' | 'international',
+      journeyTitles: [j.title],
+    }))
+  );
+});
 ---
 
 <Layout title="足迹地图" active="map">
