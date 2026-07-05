@@ -257,13 +257,13 @@ export default function SubCardEdit({ mode }: Props) {
       </div>
 
       <div className="admin-card">
-        <h2>行程表</h2>
-        <ItineraryEditor value={s.itineraryTable} onChange={updateItinerary} />
+        <h2>费用</h2>
+        <CostFields value={s.cost} onChange={cost => update('cost', cost)} />
       </div>
 
       <div className="admin-card">
-        <h2>费用</h2>
-        <CostFields value={s.cost} onChange={cost => update('cost', cost)} />
+        <h2>行程表</h2>
+        <ItineraryEditor value={s.itineraryTable} onChange={updateItinerary} />
       </div>
 
       <div className="admin-card">
