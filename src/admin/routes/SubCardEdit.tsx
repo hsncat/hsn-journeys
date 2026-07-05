@@ -9,7 +9,7 @@ import { toast } from '../components/Toast';
 import ItineraryEditor from '../components/ItineraryEditor';
 import SubCardPhotoGallery from '../components/SubCardPhotoGallery';
 import CostFields from '../components/CostFields';
-import { dateRangeFromItinerary } from '@/lib/itinerary';
+import { dateRangeFromItinerary, normalizeItineraryTable } from '@/lib/itinerary';
 
 interface Props { mode: 'new' | 'edit' }
 
@@ -52,7 +52,11 @@ export default function SubCardEdit({ mode }: Props) {
         if (p) setParent(p);
         if (mode === 'edit' && subId) {
           const real = await getSubCardApi(decodeURIComponent(subId));
-          setS({ ...real, country: normalizeCountryLabel(real.country) });
+          setS({
+            ...real,
+            country: normalizeCountryLabel(real.country),
+            itineraryTable: normalizeItineraryTable(real.itineraryTable),
+          });
         } else if (mode === 'new' && p) {
           setS(prev => ({
             ...prev,
@@ -91,10 +95,11 @@ export default function SubCardEdit({ mode }: Props) {
   };
 
   const updateItinerary = (itineraryTable: SubCardDTO['itineraryTable']) => {
-    const range = dateRangeFromItinerary(itineraryTable);
+    const normalized = normalizeItineraryTable(itineraryTable);
+    const range = dateRangeFromItinerary(normalized);
     setS(prev => ({
       ...prev,
-      itineraryTable,
+      itineraryTable: normalized,
       ...(range ? { date: range.date, endDate: range.endDate } : {}),
     }));
   };

@@ -14,19 +14,56 @@ export function normalizeItineraryTable(t: ItineraryTable | null | undefined): I
   if (!t || !Array.isArray(t.headers) || !Array.isArray(t.rows)) {
     return emptyItinerary();
   }
-  const headers = t.headers.length > 0 ? [...t.headers] : ['日期', '上午', '下午', '备注'];
-  // 过滤"晚上"列（如果存在），保持当前 UI 的列顺序
-  const eveningIdx = headers.indexOf('晚上');
-  if (eveningIdx >= 0) {
-    headers.splice(eveningIdx, 1);
+  const rawHeaders = t.headers.length > 0 ? t.headers.map(h => String(h)) : ['日期', '行程'];
+  const dateIdx = rawHeaders.indexOf('日期') >= 0 ? rawHeaders.indexOf('日期') : 0;
+  const routeIdx = rawHeaders.indexOf('行程');
+  const morningIdx = rawHeaders.indexOf('上午');
+  const afternoonIdx = rawHeaders.indexOf('下午');
+  const noteIdx = rawHeaders.indexOf('备注');
+  const legacyColumns = new Set([dateIdx, routeIdx, morningIdx, afternoonIdx, noteIdx].filter(i => i >= 0));
+  const eveningIdx = rawHeaders.indexOf('晚上');
+  if (eveningIdx >= 0) legacyColumns.add(eveningIdx);
+
+  if (morningIdx >= 0 || afternoonIdx >= 0 || noteIdx >= 0 || eveningIdx >= 0) {
+    const extras = rawHeaders
+      .map((header, index) => ({ header, index }))
+      .filter(({ index }) => !legacyColumns.has(index));
+    const headers = ['日期', '行程', ...extras.map(({ header }) => header || '新列')];
+    const rows = t.rows.map(r => {
+      const arr = Array.isArray(r) ? r : [];
+      return [
+        String(arr[dateIdx] ?? ''),
+        joinRouteCells(
+          routeIdx >= 0 ? arr[routeIdx] : '',
+          morningIdx >= 0 ? arr[morningIdx] : '',
+          afternoonIdx >= 0 ? arr[afternoonIdx] : '',
+        ),
+        ...extras.map(({ index, header }) => cleanCellByHeader(header, arr[index])),
+      ];
+    });
+    return { headers, rows };
   }
+
+  const headers = rawHeaders.map((header, index) => header || `新列${index + 1}`);
   const rows = t.rows.map(r => {
     const arr = Array.isArray(r) ? [...r] : [];
-    if (eveningIdx >= 0 && arr.length > eveningIdx) arr.splice(eveningIdx, 1);
     while (arr.length < headers.length) arr.push('');
-    return arr.slice(0, headers.length);
+    return arr.slice(0, headers.length).map((cell, index) => cleanCellByHeader(headers[index], cell));
   });
   return { headers, rows };
+}
+
+function cleanCellByHeader(header: string, value: string | number | null | undefined): string | number {
+  if (header !== '行程') return value ?? '';
+  return String(value ?? '').replace(/、/g, '/');
+}
+
+function joinRouteCells(...values: unknown[]): string {
+  return values
+    .flatMap(value => String(value ?? '').replace(/、/g, '/').split('/'))
+    .map(part => part.trim())
+    .filter(Boolean)
+    .join(' / ');
 }
 
 export function sumCost(...costs: (CostObject | null | undefined)[]): CostObject {
@@ -74,14 +111,16 @@ export function dateRangeFromItinerary(t: ItineraryTable): { date: string; endDa
 
 export function extractHighlightsFromItinerary(t: ItineraryTable): string[] {
   const result: string[] = [];
+  const routeIdx = t.headers.indexOf('行程');
   const morningIdx = t.headers.indexOf('上午');
   const afternoonIdx = t.headers.indexOf('下午');
+  const indexes = routeIdx >= 0 ? [routeIdx] : [morningIdx, afternoonIdx];
   for (const row of t.rows) {
-    for (const idx of [morningIdx, afternoonIdx]) {
+    for (const idx of indexes) {
       if (idx < 0) continue;
       const cell = String(row[idx] ?? '').trim();
       if (!cell) continue;
-      cell.split(/[、，,；;]/).forEach(part => {
+      cell.replace(/、/g, '/').split(/[\/，,；;]/).forEach(part => {
         const trimmed = part.trim();
         if (trimmed) result.push(trimmed);
       });

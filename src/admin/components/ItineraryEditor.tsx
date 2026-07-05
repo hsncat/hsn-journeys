@@ -15,7 +15,7 @@ interface FloatingControl {
 }
 
 export default function ItineraryEditor({ value, onChange }: Props) {
-  const headers = value.headers.length ? value.headers : ['日期', '上午', '下午', '备注'];
+  const headers = value.headers.length ? value.headers : ['日期', '行程'];
   const rows = value.rows;
   const visibleRows = rows.length ? rows : [headers.map(() => '')];
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -26,7 +26,7 @@ export default function ItineraryEditor({ value, onChange }: Props) {
   const setCell = (r: number, c: number, val: string) => {
     const newRows = normalizedRows(rows, headers.length);
     while (newRows.length <= r) newRows.push(headers.map(() => ''));
-    newRows[r][c] = val;
+    newRows[r][c] = cleanCell(headers[c], val);
     if (r === 0 && isDateColumn(c) && isFullDate(val)) {
       for (let i = 1; i < newRows.length; i++) {
         if (!String(newRows[i][c] ?? '').trim()) {
@@ -127,7 +127,10 @@ export default function ItineraryEditor({ value, onChange }: Props) {
     while (nextRows.length < startRow + matrix.length) nextRows.push(nextHeaders.map(() => ''));
     matrix.forEach((row, rOffset) => {
       row.forEach((cell, cOffset) => {
-        nextRows[startRow + rOffset][startCol + cOffset] = cell.trim();
+        nextRows[startRow + rOffset][startCol + cOffset] = cleanCell(
+          nextHeaders[startCol + cOffset],
+          cell.trim(),
+        );
       });
     });
     onChange({ headers: nextHeaders, rows: nextRows });
@@ -214,6 +217,10 @@ function normalizedRows(rows: (string | number)[][], colCount: number): (string 
     while (next.length < colCount) next.push('');
     return next.slice(0, colCount);
   });
+}
+
+function cleanCell(header: string | undefined, value: string): string {
+  return header === '行程' ? value.replace(/、/g, '/') : value;
 }
 
 function normalizeDate(s: string): string {

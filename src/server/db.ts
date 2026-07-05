@@ -180,7 +180,7 @@ export const emptyCost = (): CostObject => ({
 });
 
 export const emptyItinerary = (): ItineraryTable => ({
-  headers: ['日期', '上午', '下午', '备注'],
+  headers: ['日期', '行程'],
   rows: [],
 });
 

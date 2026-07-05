@@ -298,7 +298,7 @@ export default function JourneyEdit({ mode }: Props) {
                 <th></th>
                 <th>名称</th>
                 <th>日期</th>
-                <th>亮点</th>
+                <th>行程</th>
                 <th>费用</th>
                 <th></th>
               </tr>
@@ -365,7 +365,7 @@ export default function JourneyEdit({ mode }: Props) {
                   <th></th>
                   <th>名称</th>
                   <th>日期</th>
-                  <th>亮点</th>
+                  <th>行程</th>
                   <th>费用</th>
                   <th></th>
                 </tr>
