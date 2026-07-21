@@ -78,6 +78,13 @@ export const deleteWishlistApi = (id: number) =>
 // Coords
 export const listCoordsApi = () =>
   request<{ coords: CityCoordRow[] }>('/api/coords').then(r => r.coords);
+export const geocodeCoordApi = (q: string, country?: string, type?: 'domestic' | 'international') => {
+  const params = new URLSearchParams({ q });
+  if (country) params.set('country', country);
+  if (type) params.set('type', type);
+  return request<{ coord: CityCoordRow & { displayName?: string; source?: string } }>(`/api/coords/geocode?${params.toString()}`)
+    .then(r => r.coord);
+};
 export const upsertCoordApi = (name: string, data: Omit<CityCoordRow, 'name' | 'updated_at'>) =>
   request<{ coord: CityCoordRow }>(`/api/coords/${encodeURIComponent(name)}`, {
     method: 'PUT', body: JSON.stringify(data),

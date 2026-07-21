@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { deleteCoordApi, listCoordsApi, upsertCoordApi } from '../api';
+import { useEffect, useRef, useState } from 'react';
+import { deleteCoordApi, geocodeCoordApi, listCoordsApi, upsertCoordApi } from '../api';
 import type { CityCoordRow } from '@/server/db';
 import { toast } from '../components/Toast';
 
@@ -10,6 +10,9 @@ export default function CoordsEdit() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<CityCoordRow> | null>(null);
   const [q, setQ] = useState('');
+  const [geocoding, setGeocoding] = useState(false);
+  const [geocodeHint, setGeocodeHint] = useState('');
+  const lastGeocodeKey = useRef('');
 
   const load = async () => {
     setLoading(true);
@@ -21,6 +24,49 @@ export default function CoordsEdit() {
 
   const filtered = q ? list.filter(c => `${c.name} ${c.country}`.toLowerCase().includes(q.toLowerCase())) : list;
 
+  const lookupCoordForEditing = async (draft = editing) => {
+    if (!draft) return;
+    const name = (draft.name ?? '').trim();
+    const country = (draft.country ?? '').trim();
+    const type = draft.type ?? 'domestic';
+    if (list.some(c => c.name === name)) return;
+    if (!name) {
+      setGeocodeHint('');
+      return;
+    }
+    if (name.length < 2) {
+      setGeocodeHint('城市名至少输入 2 个字后自动获取坐标');
+      return;
+    }
+
+    const key = `${name}|${country}|${type}`;
+    if (lastGeocodeKey.current === key) return;
+    lastGeocodeKey.current = key;
+    setGeocoding(true);
+    setGeocodeHint('正在自动获取坐标...');
+    try {
+      const coord = await geocodeCoordApi(name, country, type);
+      setEditing(prev => {
+        if (!prev || (prev.name ?? '').trim() !== name) return prev;
+        return {
+          ...prev,
+          lat: coord.lat,
+          lng: coord.lng,
+          country: prev.country || coord.country,
+          type: coord.type,
+        };
+      });
+      setGeocodeHint(coord.displayName ? `已自动获取：${coord.displayName}` : '已自动获取坐标');
+    } catch (err) {
+      const message = err instanceof Error && err.message === 'geocode_not_found'
+        ? '未找到坐标，请手动填写'
+        : '坐标自动获取失败，请手动填写';
+      setGeocodeHint(message);
+    } finally {
+      setGeocoding(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!editing || !editing.name || !editing.country || !editing.type) {
       toast('请填写完整', 'error');
@@ -28,6 +74,10 @@ export default function CoordsEdit() {
     }
     if (typeof editing.lat !== 'number' || typeof editing.lng !== 'number') {
       toast('lat/lng 必须是数字', 'error');
+      return;
+    }
+    if (editing.lat === 0 && editing.lng === 0) {
+      toast('请先自动获取或手动填写有效坐标', 'error');
       return;
     }
     try {
@@ -58,7 +108,11 @@ export default function CoordsEdit() {
           <p className="breadcrumb">管理后台 / 城市坐标</p>
           <h1>城市坐标 ({list.length})</h1>
         </div>
-        <button className="btn btn-primary" onClick={() => setEditing(blank())}>+ 添加</button>
+        <button className="btn btn-primary" onClick={() => {
+          lastGeocodeKey.current = '';
+          setGeocodeHint('');
+          setEditing(blank());
+        }}>+ 添加</button>
       </div>
 
       <div className="admin-card" style={{ padding: 16, marginBottom: 16 }}>
@@ -103,7 +157,11 @@ export default function CoordsEdit() {
                   </td>
                   <td>
                     <div className="row-actions">
-                      <button className="btn btn-sm btn-ghost" onClick={() => setEditing({ ...c })}>编辑</button>
+                      <button className="btn btn-sm btn-ghost" onClick={() => {
+                        lastGeocodeKey.current = '';
+                        setGeocodeHint('');
+                        setEditing({ ...c });
+                      }}>编辑</button>
                       <button className="btn btn-sm btn-danger" onClick={() => handleDelete(c.name)}>删除</button>
                     </div>
                   </td>
@@ -123,13 +181,34 @@ export default function CoordsEdit() {
                 <label>城市名 *</label>
                 <input
                   type="text" value={editing.name ?? ''}
-                  onChange={e => setEditing(p => ({ ...p!, name: e.target.value }))}
+                  onChange={e => {
+                    lastGeocodeKey.current = '';
+                    setGeocodeHint('');
+                    setEditing(p => ({ ...p!, name: e.target.value }));
+                  }}
+                  onBlur={e => lookupCoordForEditing({ ...editing, name: e.currentTarget.value })}
                   disabled={!!list.find(c => c.name === editing.name)}
                 />
+                {!list.find(c => c.name === editing.name) && geocodeHint && (
+                  <p style={{
+                    margin: '6px 0 0',
+                    fontSize: 12,
+                    lineHeight: 1.5,
+                    color: geocodeHint.includes('失败') || geocodeHint.includes('未找到')
+                      ? 'var(--color-danger)'
+                      : 'var(--color-text-muted)',
+                  }}>
+                    {geocodeHint}
+                  </p>
+                )}
               </div>
               <div className="field" style={{ gridColumn: 'span 2' }}>
                 <label>国家 *</label>
-                <input type="text" value={editing.country ?? ''} onChange={e => setEditing(p => ({ ...p!, country: e.target.value }))} />
+                <input type="text" value={editing.country ?? ''} onChange={e => {
+                  lastGeocodeKey.current = '';
+                  setGeocodeHint('');
+                  setEditing(p => ({ ...p!, country: e.target.value }));
+                }} onBlur={e => lookupCoordForEditing({ ...editing, country: e.currentTarget.value })} />
               </div>
               <div className="field">
                 <label>纬度 *</label>
@@ -141,7 +220,13 @@ export default function CoordsEdit() {
               </div>
               <div className="field" style={{ gridColumn: 'span 2' }}>
                 <label>类型</label>
-                <select value={editing.type ?? 'domestic'} onChange={e => setEditing(p => ({ ...p!, type: e.target.value as 'domestic' | 'international' }))}>
+                <select value={editing.type ?? 'domestic'} onChange={e => {
+                  lastGeocodeKey.current = '';
+                  setGeocodeHint('');
+                  const next = { ...editing, type: e.target.value as 'domestic' | 'international' };
+                  setEditing(next);
+                  lookupCoordForEditing(next);
+                }}>
                   <option value="domestic">国内</option>
                   <option value="international">国际</option>
                 </select>
@@ -149,7 +234,9 @@ export default function CoordsEdit() {
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
               <button className="btn btn-ghost" onClick={() => setEditing(null)}>取消</button>
-              <button className="btn btn-primary" onClick={handleSave}>保存</button>
+              <button className="btn btn-primary" onClick={handleSave} disabled={geocoding}>
+                {geocoding ? '获取中...' : '保存'}
+              </button>
             </div>
           </div>
         </div>
