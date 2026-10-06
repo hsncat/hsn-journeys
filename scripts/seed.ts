@@ -139,7 +139,7 @@ lines.push('DELETE FROM journeys;');
 lines.push('DELETE FROM wishlist;');
 lines.push('DELETE FROM city_coords;');
 lines.push('DELETE FROM packing_items;');
-lines.push('DELETE FROM sqlite_sequence WHERE name IN ("journeys", "wishlist", "packing_items");');
+lines.push("DELETE FROM sqlite_sequence WHERE name IN ('journeys', 'wishlist', 'packing_items');");
 lines.push('');
 
 // ---- Journeys + SubCards ----
