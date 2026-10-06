@@ -1,8 +1,8 @@
 /**
  * 多地点拆分约定
  * - 国际多国：country 含 "·" → 拆国家
+ * - 国内跨市：city 含 "&" → 拆市（优先于跨省，保证成都&重庆等具体城市精准打点）
  * - 国内跨省：province 含 "&" → 拆省
- * - 国内跨市：city 含 "&" → 拆市
  * - 单地点：兜底
  */
 
@@ -19,19 +19,19 @@ export function generateLocations(j: Pick<JourneyDTO, 'country' | 'province' | '
   if (j.country && j.country.includes('·')) {
     return j.country.split('·').map(name => ({ name: name.trim(), type: 'country' }));
   }
-  if (j.province && j.province.includes('&')) {
-    return j.province.split('&').map(name => ({
-      name: name.trim(),
-      type: 'province',
-      country: j.country,
-    }));
-  }
   if (j.city && j.city.includes('&')) {
     return j.city.split('&').map(name => ({
       name: name.trim(),
       type: 'city',
       country: j.country,
       province: j.province,
+    }));
+  }
+  if (j.province && j.province.includes('&')) {
+    return j.province.split('&').map(name => ({
+      name: name.trim(),
+      type: 'province',
+      country: j.country,
     }));
   }
   return [{
